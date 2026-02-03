@@ -10,7 +10,7 @@ CSC4350 Group 14 Project
 ## Tech Stack
 
 ### Frontend
-- Angular 21
+- Angular 21.1.2
 - Node.js 24 LTS
 
 ### Backend
@@ -21,10 +21,11 @@ CSC4350 Group 14 Project
 
 ## Prerequisites
 
-- Node.js 24 (or use mise preferably)
+- Node.js 24.x LTS (use mise preferably to install node.js and .NET runtimes)
 - .NET 10 SDK
-- PostgreSQL (need to check version)
+- PostgreSQL 18
 - Git
+- EF Core Tools: `dotnet tool install --global dotnet-ef`
 
 ## Setup Instructions
 
