@@ -4,6 +4,18 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Angular
+client/dist/
+client/.angular/
+client/.vscode/
+
+# .NET
+api/bin/
+api/obj/
+api/*.user
+api/appsettings.Development.json
+*.log
+
 # mise
 .mise.local.toml
 
@@ -18,3 +30,7 @@ Thumbs.db
 *~
 *.swp
 *.swo
+
+# Environment files (may contain secrets)
+.env
+.env.local
