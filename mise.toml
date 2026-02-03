@@ -1,2 +1,3 @@
 [tools]
 node = "24"
+dotnet = "10.0.102"
