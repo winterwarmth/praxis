@@ -1,11 +1,18 @@
 {
   "version": 2,
-  "dgSpecHash": "ny/QCAvIzMg=",
+  "dgSpecHash": "Kw+76INaozc=",
   "success": true,
   "projectFilePath": "/mnt/wdblue4tb/Desktop/Dev/web-projects/Praxis/api/PraxisApi.csproj",
   "expectedPackageFiles": [
+    "/home/soo/.nuget/packages/microsoft.aspnetcore.identity.entityframeworkcore/10.0.2/microsoft.aspnetcore.identity.entityframeworkcore.10.0.2.nupkg.sha512",
     "/home/soo/.nuget/packages/microsoft.aspnetcore.openapi/10.0.2/microsoft.aspnetcore.openapi.10.0.2.nupkg.sha512",
-    "/home/soo/.nuget/packages/microsoft.openapi/2.0.0/microsoft.openapi.2.0.0.nupkg.sha512"
+    "/home/soo/.nuget/packages/microsoft.entityframeworkcore/10.0.2/microsoft.entityframeworkcore.10.0.2.nupkg.sha512",
+    "/home/soo/.nuget/packages/microsoft.entityframeworkcore.abstractions/10.0.2/microsoft.entityframeworkcore.abstractions.10.0.2.nupkg.sha512",
+    "/home/soo/.nuget/packages/microsoft.entityframeworkcore.analyzers/10.0.2/microsoft.entityframeworkcore.analyzers.10.0.2.nupkg.sha512",
+    "/home/soo/.nuget/packages/microsoft.entityframeworkcore.relational/10.0.2/microsoft.entityframeworkcore.relational.10.0.2.nupkg.sha512",
+    "/home/soo/.nuget/packages/microsoft.openapi/2.0.0/microsoft.openapi.2.0.0.nupkg.sha512",
+    "/home/soo/.nuget/packages/npgsql/10.0.0/npgsql.10.0.0.nupkg.sha512",
+    "/home/soo/.nuget/packages/npgsql.entityframeworkcore.postgresql/10.0.0/npgsql.entityframeworkcore.postgresql.10.0.0.nupkg.sha512"
   ],
   "logs": []
 }
