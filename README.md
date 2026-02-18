@@ -3,9 +3,9 @@
 CSC4350 Group 14 Project
 
 ## Team Members
-- Soo
-- Edgar
-- Hui
+- Soo: https://github.com/canopyfox
+- Edgar: https://github.com/Ramireedgar
+- Hui: https://github.com/Bui-DucHUY
 
 ## Tech Stack
 
