@@ -1,0 +1,38 @@
+<nav>
+  <button class="menu-toggle" (click)="toggleMenu()" [attr.aria-label]="menuOpen() ? 'Close menu' : 'Open menu'" [attr.aria-expanded]="menuOpen()">
+    @if (menuOpen()) {
+      <ng-icon name="lucideX"></ng-icon>
+    } @else {
+      <ng-icon name="lucideMenu"></ng-icon>
+    }
+  </button>
+  <div class="nav-links" [class.open]="menuOpen()">
+    <a routerLink="/home"
+       routerLinkActive="active"
+       [routerLinkActiveOptions]="{exact: true}"
+       ariaCurrentWhenActive="page"
+       draggable="false"
+       (click)="closeMenu()">
+      <ng-icon name="lucideHome"></ng-icon>
+      <span>Home</span>
+    </a>
+    <a routerLink="/saved"
+       routerLinkActive="active"
+       [routerLinkActiveOptions]="{exact: true}"
+       ariaCurrentWhenActive="page"
+       draggable="false"
+       (click)="closeMenu()">
+      <ng-icon name="lucidePocket"></ng-icon>
+      <span>Saved</span>
+    </a>
+    <a routerLink="/for-you"
+       routerLinkActive="active"
+       [routerLinkActiveOptions]="{exact: true}"
+       ariaCurrentWhenActive="page"
+       draggable="false"
+       (click)="closeMenu()">
+      <ng-icon name="lucideLeaf"></ng-icon>
+      <span>For You</span>
+    </a>
+  </div>
+</nav>
