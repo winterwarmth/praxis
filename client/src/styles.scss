@@ -1,1 +1,21 @@
 /* You can add global styles to this file, and also import other style files */
+@use '@fontsource/inter';
+@use '@fontsource/cascadia-mono';
+
+:root {
+  --bg-color: #151921;
+  --text-color: #e0e0e0;
+  --nav-active-bg: var(--text-color);
+  --nav-active-text: var(--bg-color);
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+}
+
+code, pre, .mono {
+  font-family: 'Cascadia Mono', monospace;
+}
