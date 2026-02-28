@@ -1,0 +1,29 @@
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2rem;
+  background-color: rgba(255, 255, 255, 0.05);
+
+  ng-icon {
+    color: var(--text-color);
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: none;
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 1rem;
+
+    &::placeholder {
+      color: rgba(224, 224, 224, 0.5);
+    }
+  }
+}

@@ -1,0 +1,10 @@
+<div class="search-container">
+  <ng-icon name="lucideSearch"></ng-icon>
+  <input
+    type="text"
+    [placeholder]="placeholder()"
+    [ngModel]="query()"
+    (ngModelChange)="query.set($event)"
+    (keydown.enter)="onSearch()"
+  />
+</div>
