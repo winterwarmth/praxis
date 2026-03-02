@@ -3,3 +3,10 @@ app-search-bar {
   max-width: 600px;
   margin: 2rem auto;
 }
+
+.listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  padding: 0 1.5rem;
+}

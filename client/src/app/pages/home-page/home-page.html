@@ -1,1 +1,12 @@
 <app-search-bar placeholder="Search listings..." (search)="onSearch($event)" />
+<div class="listings-grid">
+  @for (listing of listings(); track listing.id) {
+    <app-listing-card
+      [id]="listing.id"
+      [title]="listing.title"
+      [price]="listing.price"
+      [category]="listing.category"
+      [condition]="listing.condition"
+    />
+  }
+</div>
