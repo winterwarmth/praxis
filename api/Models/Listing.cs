@@ -36,4 +36,6 @@ public class Listing
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    public ICollection<ListingImage> Images { get; set; } = [];
 }

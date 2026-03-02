@@ -14,33 +14,56 @@ export class HomePage implements OnInit {
   private listingService = inject(ListingService);
   readonly listings = signal<Listing[]>([]);
 
+  private search = signal('');
+  private sort = signal('price-low');
+  private category = signal('All');
+  private priceMin = signal<number | null>(null);
+  private priceMax = signal<number | null>(null);
+
   ngOnInit(): void {
-    this.listingService.getListings().subscribe(data => {
-      this.listings.set(data);
-    });
+    this.fetchListings();
   }
 
   onSearch(query: string): void {
-    // TODO: implement search
+    this.search.set(query);
+    this.fetchListings();
   }
 
   onSort(sortBy: string): void {
-    // TODO: implement sorting
-  }
-
-  onPriceFilter(price: { min: number | null; max: number | null }): void {
-    // TODO: implement price filtering
+    this.sort.set(sortBy);
+    this.fetchListings();
   }
 
   onFilter(category: string): void {
-    // TODO: implement filtering
+    this.category.set(category);
+    this.fetchListings();
+  }
+
+  onPriceFilter(price: { min: number | null; max: number | null }): void {
+    this.priceMin.set(price.min);
+    this.priceMax.set(price.max);
+    this.fetchListings();
   }
 
   onPaymentFilter(methods: string[]): void {
-    // TODO: implement payment filtering
+    // Not implemented yet — no backend field
   }
 
   onCourseFilter(course: string): void {
-    // TODO: implement course filtering
+    // Not implemented yet — no backend field
+  }
+
+  private fetchListings(): void {
+    this.listingService
+      .getListings({
+        search: this.search(),
+        category: this.category(),
+        sort: this.sort(),
+        minPrice: this.priceMin(),
+        maxPrice: this.priceMax(),
+      })
+      .subscribe((data) => {
+        this.listings.set(data);
+      });
   }
 }

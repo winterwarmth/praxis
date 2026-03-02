@@ -1,20 +1,20 @@
+:host {
+  display: block;
+}
+
 .listing-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.75rem;
+  height: 100%;
+  border-radius: 0.4rem;
   overflow: hidden;
   text-decoration: none;
   color: var(--text-color);
-  transition: border-color 0.2s;
-
-  &:hover {
-    border-color: rgba(255, 255, 255, 0.25);
-  }
 }
 
 .card-image {
-  aspect-ratio: 4 / 3;
+  height: 220px;
+  flex-shrink: 0;
   overflow: hidden;
 
   img {
@@ -31,10 +31,14 @@
 }
 
 .card-body {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: none;
+  border-radius: 0 0 0.4rem 0.4rem;
 }
 
 .card-title {
@@ -51,9 +55,7 @@
   font-weight: 600;
 }
 
-.card-meta {
-  display: flex;
-  gap: 0.5rem;
+.card-condition {
   font-size: 0.75rem;
   color: rgba(224, 224, 224, 0.6);
 }

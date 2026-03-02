@@ -8,7 +8,6 @@ import { Component, output, signal } from '@angular/core';
 })
 export class ListingFilter {
   readonly sortOptions = [
-    { value: 'newest', label: 'Newest' },
     { value: 'price-low', label: 'Price: Low to High' },
     { value: 'price-high', label: 'Price: High to Low' }
   ];
@@ -28,7 +27,7 @@ export class ListingFilter {
 
   readonly paymentMethods = ['Cash', 'Cash App', 'PayPal', 'Venmo', 'Zelle'];
 
-  readonly sortBy = signal('newest');
+  readonly sortBy = signal('price-low');
   readonly selected = signal('All');
   readonly priceMin = signal<number | null>(null);
   readonly priceMax = signal<number | null>(null);
