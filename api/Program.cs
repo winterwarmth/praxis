@@ -1,12 +1,14 @@
+using Microsoft.EntityFrameworkCore;
+using PraxisApi.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddDbContext<PraxisDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -14,28 +16,53 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapGet("/api/listings", async (
+    PraxisDbContext db,
+    string? search,
+    string? category,
+    string? sort,
+    decimal? minPrice,
+    decimal? maxPrice) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    var query = db.Listings
+        .Where(l => l.Status == "active")
+        .AsQueryable();
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    if (!string.IsNullOrWhiteSpace(search))
+        query = query.Where(l => l.Title.ToLower().Contains(search.ToLower()));
+
+    if (!string.IsNullOrWhiteSpace(category) && category != "All")
+        query = query.Where(l => l.Category.ToLower() == category.ToLower());
+
+    if (minPrice.HasValue)
+        query = query.Where(l => l.Price >= minPrice.Value);
+
+    if (maxPrice.HasValue)
+        query = query.Where(l => l.Price <= maxPrice.Value);
+
+    query = sort switch
+    {
+        "price-low" => query.OrderBy(l => l.Price),
+        "price-high" => query.OrderByDescending(l => l.Price),
+        _ => query.OrderByDescending(l => l.CreatedAt),
+    };
+
+    return await query
+        .Select(l => new
+        {
+            l.Id,
+            l.SellerId,
+            l.Title,
+            l.Description,
+            l.Price,
+            l.Category,
+            l.Condition,
+            l.Status,
+            l.CreatedAt,
+            l.UpdatedAt,
+            ImageUrl = l.Images.OrderBy(i => i.DisplayOrder).Select(i => i.ImageUrl).FirstOrDefault()
+        })
+        .ToListAsync();
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

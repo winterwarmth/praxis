@@ -1,0 +1,19 @@
+<a class="listing-card" [routerLink]="['/listing', id()]" draggable="false">
+  <div class="card-image">
+    @if (imageUrl()) {
+      <img [src]="imageUrl()" [alt]="title()" />
+    } @else {
+      <div class="placeholder"></div>
+    }
+  </div>
+  <div class="card-body">
+    <h3 class="card-title">{{ title() }}</h3>
+    <span class="card-price">{{ price() | currency }}</span>
+    @if (condition()) {
+      <span class="card-condition">{{ condition() }}</span>
+    }
+    @if (sellerName()) {
+      <span class="card-seller">{{ sellerName() }}</span>
+    }
+  </div>
+</a>
