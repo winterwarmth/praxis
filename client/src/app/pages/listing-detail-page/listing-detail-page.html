@@ -1,1 +1,19 @@
-<p>listing-detail-page works!</p>
+<section class="listing-detail">
+  <header class="listing-header">
+    <h1>{{ title() }}</h1>
+
+    @if (listingId()) {
+      <button
+        type="button"
+        class="save-button"
+        (click)="toggleSave()"
+      >
+        {{ isSaved() ? 'Unsave' : 'Save' }}
+      </button>
+    }
+  </header>
+
+  <p class="listing-placeholder">
+    This is where your listing details will go. Use the Save button to add this listing to your Saved page and come back to it later.
+  </p>
+</section>

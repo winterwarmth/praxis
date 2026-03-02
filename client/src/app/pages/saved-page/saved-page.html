@@ -1,1 +1,37 @@
-<p>saved-page works!</p>
+<section class="saved-page">
+  <header class="saved-header">
+    <h1>Saved listings</h1>
+
+    @if (items().length > 0) {
+      <button type="button" class="clear-button" (click)="clearAll()">
+        Clear all
+      </button>
+    }
+  </header>
+
+  @if (items().length === 0) {
+    <p class="empty-state">
+      You haven’t saved any listings yet. Tap the Save button on a listing to keep it here for later.
+    </p>
+  } @else {
+    <ul class="saved-list">
+      @for (item of items(); track item.id) {
+        <li class="saved-item">
+          <a [routerLink]="['/listing', item.id]" class="saved-link">
+            <h2>{{ item.title }}</h2>
+            @if (item.description) {
+              <p>{{ item.description }}</p>
+            }
+          </a>
+          <button
+            type="button"
+            class="remove-button"
+            (click)="remove(item.id)"
+          >
+            Remove
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>
