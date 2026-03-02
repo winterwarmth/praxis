@@ -3,3 +3,10 @@ app-search-bar {
   max-width: 600px;
   margin: 2rem auto;
 }
+
+.home-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1.5rem;
+  padding: 0 1.5rem;
+}

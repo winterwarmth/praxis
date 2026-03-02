@@ -1,0 +1,57 @@
+<aside class="filter-sidebar">
+  <h3>Sort By</h3>
+  <select [value]="sortBy()" (change)="onSortChange($event)">
+    @for (option of sortOptions; track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
+
+  <h3>Categories</h3>
+  @for (category of categories; track category) {
+    <button
+      [class.active]="selected() === category"
+      (click)="onSelect(category)">
+      {{ category }}
+    </button>
+  }
+
+  <h3>Price</h3>
+  <div class="price-range">
+    <input
+      type="number"
+      placeholder="Min"
+      [value]="priceMin()"
+      (input)="onPriceMinInput($event)"
+      min="0"
+    />
+    <span>-</span>
+    <input
+      type="number"
+      placeholder="Max"
+      [value]="priceMax()"
+      (input)="onPriceMaxInput($event)"
+      min="0"
+    />
+  </div>
+
+  <h3>Payment</h3>
+  @for (method of paymentMethods; track method) {
+    <label class="checkbox-label">
+      <input
+        type="checkbox"
+        [checked]="selectedPayments().includes(method)"
+        (change)="onTogglePayment(method)"
+      />
+      {{ method }}
+    </label>
+  }
+
+  <h3>Course</h3>
+  <input
+    type="text"
+    class="course-input"
+    placeholder="e.g. CSC 4350"
+    [value]="courseQuery()"
+    (input)="onCourseInput($event)"
+  />
+</aside>

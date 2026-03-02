@@ -1,0 +1,101 @@
+.filter-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  h3 {
+    margin: 1rem 0 0.5rem;
+    font-size: 1rem;
+    color: var(--text-color);
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.price-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  input {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    -moz-appearance: textfield;
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 0.875rem;
+    outline: none;
+
+    &::placeholder {
+      color: rgba(224, 224, 224, 0.5);
+    }
+  }
+
+  span {
+    color: var(--text-color);
+  }
+}
+
+select, .course-input {
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 0.875rem;
+  outline: none;
+
+  &::placeholder {
+    color: rgba(224, 224, 224, 0.5);
+  }
+}
+
+select {
+  cursor: pointer;
+
+  option {
+    background-color: var(--bg-color);
+  }
+}
+
+button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: none;
+  color: var(--text-color);
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  &.active {
+    background-color: var(--nav-active-bg);
+    color: var(--nav-active-text);
+  }
+}

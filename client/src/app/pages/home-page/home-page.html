@@ -1,1 +1,6 @@
 <app-search-bar placeholder="Search listings..." (search)="onSearch($event)" />
+<div class="home-layout">
+  <app-listing-filter (sortChange)="onSort($event)" (select)="onFilter($event)" (priceChange)="onPriceFilter($event)" (paymentChange)="onPaymentFilter($event)" (courseChange)="onCourseFilter($event)" />
+  <div class="home-content">
+  </div>
+</div>
