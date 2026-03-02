@@ -4,9 +4,17 @@ app-search-bar {
   margin: 2rem auto;
 }
 
+.home-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  align-items: start;
+  gap: 1.5rem;
+  padding: 0 1.5rem;
+}
+
 .listings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
-  padding: 0 1.5rem;
+  grid-template-columns: repeat(auto-fill, 220px);
+  grid-auto-rows: min-content;
+  gap: 1.25rem;
 }
