@@ -1,1 +1,34 @@
-<p>messages-page works!</p>
+<section class="messages-page">
+  <header class="messages-header">
+    <h1>Messages</h1>
+  </header>
+
+  @if (threads().length === 0) {
+    <p class="empty-state">
+      You don't have any active conversations yet. Reach out to a seller from a listing page to start messaging!
+    </p>
+  } @else {
+    <ul class="message-list">
+      @for (thread of threads(); track thread.id) {
+        <li class="message-item" [class.unread]="thread.isUnread">
+          <a [routerLink]="['/messages', thread.id]" class="message-link">
+            <h2>{{ thread.otherUserName }}</h2>
+            <p class="item-reference">Re: {{ thread.itemTitle }}</p>
+            <p class="last-message">{{ thread.lastMessage }}</p>
+          </a>
+          
+          <div class="message-actions">
+            <span class="timestamp">{{ thread.timestamp | date:'MMM d, h:mm a' }}</span>
+            <button
+              type="button"
+              class="remove-button"
+              (click)="removeThread(thread.id)"
+            >
+              Delete
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

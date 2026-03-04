@@ -13,8 +13,10 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
-app.UseHttpsRedirection();
+else
+{
+    app.UseHttpsRedirection();
+}
 
 app.MapGet("/api/listings", async (
     PraxisDbContext db,
@@ -64,5 +66,37 @@ app.MapGet("/api/listings", async (
         })
         .ToListAsync();
 });
+app.MapGet("/api/messages/{userId:guid}", async (Guid userId, PraxisDbContext db) =>
+{
+    var messages = await db.Messages
+        .Include(m => m.Listing)
+        .Include(m => m.Sender)
+        .Include(m => m.Receiver)
+        .Where(m => m.SenderId == userId || m.ReceiverId == userId)
+        .OrderByDescending(m => m.CreatedAt)
+        .ToListAsync();
 
+    var threads = messages
+        .GroupBy(m => new {
+            OtherUserId = m.SenderId == userId ? m.ReceiverId : m.SenderId,
+            m.ListingId
+        })
+        .Select(g =>
+        {
+            var latest = g.First();
+            var otherUser = latest.SenderId == userId ? latest.Receiver : latest.Sender;
+
+            return new
+            {
+                Id = latest.Id,
+                OtherUserName = otherUser != null ? $"{otherUser.FirstName} {otherUser.LastName}" : "Unknown User",
+                ItemTitle = latest.Listing?.Title ?? "Deleted Listing",
+                LastMessage = latest.Content,
+                IsUnread = !latest.IsRead && latest.ReceiverId == userId,
+                Timestamp = latest.CreatedAt
+            };
+        });
+
+    return Results.Ok(threads);
+});
 app.Run();
