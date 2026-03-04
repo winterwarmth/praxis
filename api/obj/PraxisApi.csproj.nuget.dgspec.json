@@ -1,25 +1,31 @@
 {
   "format": 1,
   "restore": {
-    "/mnt/wdblue4tb/Desktop/Dev/web-projects/Praxis/api/PraxisApi.csproj": {}
+    "D:\\praxis\\api\\PraxisApi.csproj": {}
   },
   "projects": {
-    "/mnt/wdblue4tb/Desktop/Dev/web-projects/Praxis/api/PraxisApi.csproj": {
+    "D:\\praxis\\api\\PraxisApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/mnt/wdblue4tb/Desktop/Dev/web-projects/Praxis/api/PraxisApi.csproj",
+        "projectUniqueName": "D:\\praxis\\api\\PraxisApi.csproj",
         "projectName": "PraxisApi",
-        "projectPath": "/mnt/wdblue4tb/Desktop/Dev/web-projects/Praxis/api/PraxisApi.csproj",
-        "packagesPath": "/home/soo/.nuget/packages/",
-        "outputPath": "/mnt/wdblue4tb/Desktop/Dev/web-projects/Praxis/api/obj/",
+        "projectPath": "D:\\praxis\\api\\PraxisApi.csproj",
+        "packagesPath": "C:\\Users\\buidu\\.nuget\\packages\\",
+        "outputPath": "D:\\praxis\\api\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "/home/soo/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\buidu\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -76,7 +82,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.102/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

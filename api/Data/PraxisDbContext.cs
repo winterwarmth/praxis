@@ -7,4 +7,6 @@ public class PraxisDbContext(DbContextOptions<PraxisDbContext> options) : DbCont
 {
     public DbSet<Listing> Listings => Set<Listing>();
     public DbSet<ListingImage> ListingImages => Set<ListingImage>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Message> Messages => Set<Message>();
 }
