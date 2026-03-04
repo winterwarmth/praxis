@@ -12,6 +12,7 @@ client/.vscode/
 # .NET
 api/bin/
 api/obj/
+api/.vs/
 api/*.user
 api/appsettings.Development.json
 *.log
