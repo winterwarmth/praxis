@@ -1,11 +1,11 @@
 import { Component, computed, inject } from '@angular/core';
-import { NgIf, NgFor } from '@angular/common';
+
 import { RouterLink } from '@angular/router';
 import { SavedItemsService } from '../../shared/services/saved-items.service';
 
 @Component({
   selector: 'app-saved-page',
-  imports: [NgIf, NgFor, RouterLink],
+  imports: [RouterLink],
   templateUrl: './saved-page.html',
   styleUrl: './saved-page.scss',
 })

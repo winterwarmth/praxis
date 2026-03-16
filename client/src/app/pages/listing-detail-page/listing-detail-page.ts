@@ -1,11 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { NgIf } from '@angular/common';
+
 import { SavedItemsService } from '../../shared/services/saved-items.service';
 
 @Component({
   selector: 'app-listing-detail-page',
-  imports: [NgIf],
+  imports: [],
   templateUrl: './listing-detail-page.html',
   styleUrl: './listing-detail-page.scss',
 })
