@@ -133,9 +133,16 @@
   a {
     color: #4a7cff;
     text-decoration: none;
+    font-weight: 600;
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.75rem;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
 
     &:hover {
-      text-decoration: underline;
+      background-color: #FECC02;
+      border-color: transparent;
+      color: #fff;
     }
   }
 }
