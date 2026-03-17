@@ -25,6 +25,7 @@
     min-height: unset;
     border-radius: 50%;
     background-color: #1a2d5a;
+    border: 3px solid rgba(255, 255, 255, 0.4);
     padding: 5rem;
   }
 
@@ -34,7 +35,7 @@
     font-weight: 600;
     text-align: center;
     opacity: 1;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.5s ease-in 0.5s;
   }
 
   .title-curved {
