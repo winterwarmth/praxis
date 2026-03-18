@@ -10,18 +10,19 @@ import { MessagesPage } from './pages/messages-page/messages-page';
 import { ListingDetailPage } from './pages/listing-detail-page/listing-detail-page';
 import { CreateListingPage } from './pages/create-listing-page/create-listing-page';
 import { AdminDashboardPage } from './pages/admin-dashboard-page/admin-dashboard-page';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
-  { path: 'home', component: HomePage },
+  { path: 'home', component: HomePage, canActivate: [authGuard] },
   { path: 'login', component: LoginPage },
   { path: 'apply', component: ApplyPage },
-  { path: 'profile', component: ProfilePage },
-  { path: 'saved', component: SavedPage },
-  { path: 'for-you', component: ForYouPage },
-  { path: 'user/:id', component: UserPage },
-  { path: 'messages', component: MessagesPage },
-  { path: 'listing/create', component: CreateListingPage },
-  { path: 'listing/:id', component: ListingDetailPage },
-  { path: 'admin', component: AdminDashboardPage }
+  { path: 'profile', component: ProfilePage, canActivate: [authGuard] },
+  { path: 'saved', component: SavedPage, canActivate: [authGuard] },
+  { path: 'for-you', component: ForYouPage, canActivate: [authGuard] },
+  { path: 'user/:id', component: UserPage, canActivate: [authGuard] },
+  { path: 'messages', component: MessagesPage, canActivate: [authGuard] },
+  { path: 'listing/create', component: CreateListingPage, canActivate: [authGuard] },
+  { path: 'listing/:id', component: ListingDetailPage, canActivate: [authGuard] },
+  { path: 'admin', component: AdminDashboardPage, canActivate: [authGuard] }
 ];

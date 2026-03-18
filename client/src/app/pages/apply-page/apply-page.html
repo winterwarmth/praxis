@@ -44,7 +44,14 @@
           [(ngModel)]="username"
           name="username"
           required
+          (input)="onUsernameInput()"
         />
+        @if (usernameStatus() === 'available') {
+          <p class="field-success">Username available</p>
+        }
+        @if (usernameStatus() === 'taken') {
+          <p class="field-error">Username taken</p>
+        }
       </div>
       <div class="form-group">
         <label for="password">Password</label>
@@ -57,7 +64,32 @@
           required
         />
       </div>
-      <button type="submit" class="apply-btn">Apply</button>
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input
+          id="confirmPassword"
+          type="password"
+          placeholder="Confirm your password"
+          [(ngModel)]="confirmPassword"
+          name="confirmPassword"
+          required
+        />
+        @if (confirmPassword && confirmPassword !== password) {
+          <p class="field-error">Passwords do not match</p>
+        }
+        @if (confirmPassword && confirmPassword === password) {
+          <p class="field-success">Passwords match</p>
+        }
+      </div>
+      @if (errorMessage()) {
+        <p class="error-message">{{ errorMessage() }}</p>
+      }
+      @if (successMessage()) {
+        <p class="success-message">{{ successMessage() }}</p>
+      }
+      <button type="submit" class="apply-btn" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Submitting...' : 'Apply' }}
+      </button>
     </form>
     <p class="login-link">Already have an account? <a routerLink="/login">Log in</a></p>
   </div>

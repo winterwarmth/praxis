@@ -72,6 +72,38 @@
   }
 }
 
+.field-error {
+  color: #ff6b6b;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.field-success {
+  color: #51cf66;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.field-checking {
+  color: #a0a8b8;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.error-message {
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  text-align: center;
+  margin: 0 0 0.5rem;
+}
+
+.success-message {
+  color: #51cf66;
+  font-size: 0.8rem;
+  text-align: center;
+  margin: 0 0 0.5rem;
+}
+
 .apply-btn {
   width: 100%;
   padding: 0.625rem;
@@ -87,6 +119,11 @@
 
   &:hover {
     background-color: #3a6ae0;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
 

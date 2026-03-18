@@ -11,13 +11,13 @@
     </svg>
     <form (ngSubmit)="onSubmit()">
       <div class="form-group">
-        <label for="email">Email</label>
+        <label for="emailOrUsername">Email or Username</label>
         <input
-          id="email"
-          type="email"
+          id="emailOrUsername"
+          type="text"
           placeholder="you@example.edu"
-          [(ngModel)]="email"
-          name="email"
+          [(ngModel)]="emailOrUsername"
+          name="emailOrUsername"
           required
         />
       </div>
@@ -32,7 +32,12 @@
           required
         />
       </div>
-      <button type="submit" class="login-btn">Log in</button>
+      @if (errorMessage()) {
+        <p class="error-message">{{ errorMessage() }}</p>
+      }
+      <button type="submit" class="login-btn" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Logging in...' : 'Log in' }}
+      </button>
     </form>
     <p class="signup-link">Don't have an account? <a routerLink="/apply">Apply</a></p>
   </div>
