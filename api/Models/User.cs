@@ -37,4 +37,10 @@ public class User
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("username_changed_at")]
+    public DateTime? UsernameChangedAt { get; set; }
+
+    [Column("preferred_payment_methods")]
+    public string PreferredPaymentMethods { get; set; } = "";
 }

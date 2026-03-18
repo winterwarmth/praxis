@@ -22,6 +22,8 @@ export interface ListingFilters {
   sort?: string;
   minPrice?: number | null;
   maxPrice?: number | null;
+  sellerId?: string;
+  status?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -38,6 +40,10 @@ export class ListingService {
       params = params.set('minPrice', filters.minPrice.toString());
     if (filters?.maxPrice != null)
       params = params.set('maxPrice', filters.maxPrice.toString());
+    if (filters?.sellerId)
+      params = params.set('sellerId', filters.sellerId);
+    if (filters?.status)
+      params = params.set('status', filters.status);
 
     return this.http.get<Listing[]>('/api/listings', { params });
   }

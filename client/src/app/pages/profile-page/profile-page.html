@@ -1,1 +1,246 @@
-<p>profile-page works!</p>
+@if (profile(); as user) {
+  <div class="profile-container">
+    <div class="profile-header">
+      <div class="profile-avatar" [class.editable]="isEditing()" (click)="isEditing() && avatarInput.click()">
+        @if (user.profileImageUrl) {
+          <img [src]="user.profileImageUrl" [alt]="user.firstName" />
+        } @else {
+          <ng-icon name="lucideCircleUserRound"></ng-icon>
+        }
+        @if (isEditing()) {
+          <div class="avatar-overlay">
+            @if (isUploadingAvatar()) {
+              <span>...</span>
+            } @else {
+              <ng-icon name="lucideCamera"></ng-icon>
+            }
+          </div>
+        }
+        <input
+          #avatarInput
+          type="file"
+          accept="image/*"
+          hidden
+          (change)="onAvatarSelected($event)"
+        />
+      </div>
+      <div class="profile-info-wrapper">
+      <div class="profile-info">
+        @if (isEditing()) {
+          <div class="edit-name-row">
+            <div class="edit-field">
+              <label>First Name</label>
+              <input
+                type="text"
+                [(ngModel)]="editForm.firstName"
+                placeholder="First name"
+                class="edit-input"
+              />
+            </div>
+            <div class="edit-field">
+              <label>Last Name</label>
+              <input
+                type="text"
+                [(ngModel)]="editForm.lastName"
+                placeholder="Last name"
+                class="edit-input"
+              />
+            </div>
+          </div>
+          <div class="edit-field">
+            <label>Username</label>
+            @if (canChangeUsername()) {
+              <input
+                type="text"
+                [(ngModel)]="editForm.username"
+                placeholder="Username"
+                class="edit-input"
+                (input)="onUsernameInput()"
+              />
+              @if (usernameStatus() === 'available') {
+                <p class="field-success">Username available</p>
+              }
+              @if (usernameStatus() === 'taken') {
+                <p class="field-error">Username taken</p>
+              }
+            } @else {
+              <input
+                type="text"
+                [value]="editForm.username"
+                class="edit-input disabled"
+                disabled
+              />
+              <p class="field-note">Username can be changed after {{ nextUsernameChangeDate() }}</p>
+            }
+          </div>
+        } @else {
+          <h1>{{ user.firstName }} {{ user.lastName }}</h1>
+          <p class="username">
+            @{{ user.username }}
+            <span class="role-badge" [class.faculty]="user.role === 'faculty'">{{ user.role || 'student' }}</span>
+          </p>
+        }
+      </div>
+      @if (!isEditing()) {
+        <button class="btn btn-secondary edit-btn" (click)="startEditing()">Edit Profile</button>
+      }
+      </div>
+    </div>
+
+    <div class="profile-details">
+      <div class="detail-item">
+        <ng-icon name="lucideMenu"></ng-icon>
+        <span>{{ user.email }}</span>
+      </div>
+      @if (isEditing()) {
+        <div class="edit-field">
+          <label>Bio</label>
+          <textarea
+            [(ngModel)]="editForm.bio"
+            placeholder="Tell others about yourself"
+            class="edit-textarea"
+            rows="3"
+          ></textarea>
+        </div>
+      } @else if (user.bio) {
+        <div class="detail-item">
+          <p class="bio">{{ user.bio }}</p>
+        </div>
+      }
+    </div>
+
+    <!-- Payment Methods -->
+    <div class="profile-section">
+      <h2>My Preferred Payments</h2>
+      @if (isEditing()) {
+        <div class="payment-options">
+          @for (method of paymentOptions; track method) {
+            <div class="checkbox-label" (click)="togglePayment(method)">
+              <input type="checkbox" [checked]="editPayments[method]" (click)="$event.stopPropagation(); togglePayment(method)" />
+              {{ formatPaymentLabel(method) }}
+            </div>
+          }
+        </div>
+      } @else {
+        @if (user.preferredPaymentMethods) {
+          <div class="payment-tags">
+            @for (method of user.preferredPaymentMethods.split(','); track method) {
+              <span class="payment-tag">{{ formatPaymentLabel(method) }}</span>
+            }
+          </div>
+        } @else {
+          <p class="empty-text">No payment methods set</p>
+        }
+      }
+    </div>
+
+    <!-- Courses -->
+    <div class="profile-section">
+      <h2>My Courses</h2>
+      @if (isEditing()) {
+        <input
+          type="text"
+          [(ngModel)]="courseSearchQuery"
+          (input)="onCourseSearch()"
+          placeholder="Search courses (e.g. CSC 4350)"
+          class="edit-input course-search"
+        />
+        <div class="course-options">
+          @for (course of filteredCourses(); track course.id) {
+            <div class="checkbox-label" (click)="toggleCourse(course.id)">
+              <input type="checkbox" [checked]="isCourseSelected(course.id)" (click)="$event.stopPropagation(); toggleCourse(course.id)" />
+              {{ course.subjectCode }} {{ course.courseNumber }} — {{ course.courseName }}
+            </div>
+          }
+        </div>
+      } @else {
+        @if (courses().length > 0) {
+          <div class="course-tags">
+            @for (course of courses(); track course.id) {
+              <span class="course-tag">{{ course.subjectCode }} {{ course.courseNumber }}</span>
+            }
+          </div>
+        } @else {
+          <p class="empty-text">No courses added</p>
+        }
+      }
+    </div>
+
+    <!-- Ratings -->
+    <div class="profile-section">
+      <h2>
+        My Ratings
+        @if (reviewsData().totalReviews > 0) {
+          <span class="rating-summary">
+            <span class="stars">{{ getStars(reviewsData().averageRating) }}</span>
+            {{ reviewsData().averageRating }} ({{ reviewsData().totalReviews }})
+          </span>
+        }
+      </h2>
+      @if (reviewsData().reviews.length > 0) {
+        <div class="reviews-list">
+          @for (review of reviewsData().reviews; track review.id) {
+            <div class="review-item">
+              <div class="review-header">
+                <span class="stars">{{ getStars(review.rating) }}</span>
+                <span class="review-author">@{{ review.reviewerUsername }}</span>
+              </div>
+              @if (review.comment) {
+                <p class="review-comment">{{ review.comment }}</p>
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="empty-text">No reviews yet</p>
+      }
+    </div>
+
+    @if (errorMessage()) {
+      <p class="error-message">{{ errorMessage() }}</p>
+    }
+
+    @if (isEditing()) {
+      <div class="profile-actions">
+        <button class="btn btn-primary" (click)="saveProfile()" [disabled]="isSaving()">
+          {{ isSaving() ? 'Saving...' : 'Save' }}
+        </button>
+        <button class="btn btn-secondary" (click)="cancelEditing()">Cancel</button>
+      </div>
+    }
+
+    <div class="profile-listings">
+      <div class="listings-header">
+        <h2>My Listings</h2>
+        <div class="listing-toggle">
+          <button
+            class="toggle-btn"
+            [class.active]="listingFilter() === 'active'"
+            (click)="setListingFilter('active')"
+          >Active</button>
+          <button
+            class="toggle-btn"
+            [class.active]="listingFilter() === 'sold'"
+            (click)="setListingFilter('sold')"
+          >Sold</button>
+        </div>
+      </div>
+      @if (listings().length > 0) {
+        <div class="listings-grid">
+          @for (listing of listings(); track listing.id) {
+            <app-listing-card
+              [id]="listing.id"
+              [title]="listing.title"
+              [price]="listing.price"
+              [category]="listing.category"
+              [condition]="listing.condition"
+              [imageUrl]="listing.imageUrl"
+            />
+          }
+        </div>
+      } @else {
+        <p class="empty-text">No listings yet</p>
+      }
+    </div>
+  </div>
+}

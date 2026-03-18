@@ -69,6 +69,9 @@ app.MapPost("/api/auth/sync", async (PraxisDbContext db, ClaimsPrincipal user) =
     if (string.IsNullOrEmpty(supabaseId) || string.IsNullOrEmpty(email))
         return Results.BadRequest("Invalid token claims.");
 
+    if (!email.EndsWith(".edu", StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest("Only .edu email addresses are allowed.");
+
     // Check by supabase_id first, then by email (for pre-existing/seed users)
     var existingUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId)
         ?? await db.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -104,7 +107,9 @@ app.MapPost("/api/auth/sync", async (PraxisDbContext db, ClaimsPrincipal user) =
         FirstName = firstName,
         LastName = lastName,
         Username = username,
-        Role = "student",
+        Role = email.EndsWith("@student.gsu.edu", StringComparison.OrdinalIgnoreCase) ? "student"
+            : email.EndsWith("@gsu.edu", StringComparison.OrdinalIgnoreCase) ? "faculty"
+            : "student",
         CreatedAt = DateTime.UtcNow,
         UpdatedAt = DateTime.UtcNow,
     };
@@ -127,7 +132,51 @@ app.MapGet("/api/auth/me", async (PraxisDbContext db, ClaimsPrincipal user) =>
     if (dbUser == null)
         return Results.NotFound();
 
-    return Results.Ok(new { dbUser.Id, dbUser.Email, dbUser.Username, dbUser.FirstName, dbUser.LastName, dbUser.ProfileImageUrl });
+    return Results.Ok(new { dbUser.Id, dbUser.Email, dbUser.Username, dbUser.FirstName, dbUser.LastName, dbUser.ProfileImageUrl, dbUser.Role, dbUser.Bio, dbUser.UsernameChangedAt, dbUser.PreferredPaymentMethods });
+})
+.RequireAuthorization();
+
+app.MapPut("/api/auth/profile", async (PraxisDbContext db, ClaimsPrincipal user, HttpContext context) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var body = await context.Request.ReadFromJsonAsync<ProfileUpdateRequest>();
+    if (body == null)
+        return Results.BadRequest();
+
+    if (!string.IsNullOrWhiteSpace(body.Username) && body.Username != dbUser.Username)
+    {
+        if (dbUser.UsernameChangedAt.HasValue &&
+            (DateTime.UtcNow - dbUser.UsernameChangedAt.Value).TotalDays < 60)
+        {
+            var nextChange = dbUser.UsernameChangedAt.Value.AddDays(60);
+            return Results.BadRequest($"Username can only be changed once every 60 days. Next change available on {nextChange:MMM d, yyyy}.");
+        }
+
+        var taken = await db.Users.AnyAsync(u => u.Username == body.Username && u.Id != dbUser.Id);
+        if (taken)
+            return Results.Conflict("Username is already taken.");
+        dbUser.Username = body.Username;
+        dbUser.UsernameChangedAt = DateTime.UtcNow;
+    }
+
+    if (body.FirstName != null) dbUser.FirstName = body.FirstName;
+    if (body.LastName != null) dbUser.LastName = body.LastName;
+    if (body.Bio != null) dbUser.Bio = body.Bio;
+    if (body.PreferredPaymentMethods != null) dbUser.PreferredPaymentMethods = body.PreferredPaymentMethods;
+    if (body.ProfileImageUrl != null) dbUser.ProfileImageUrl = body.ProfileImageUrl;
+
+    dbUser.UpdatedAt = DateTime.UtcNow;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { dbUser.Id, dbUser.Email, dbUser.Username, dbUser.FirstName, dbUser.LastName, dbUser.ProfileImageUrl, dbUser.Role, dbUser.Bio, dbUser.UsernameChangedAt, dbUser.PreferredPaymentMethods });
 })
 .RequireAuthorization();
 
@@ -146,6 +195,108 @@ app.MapGet("/api/auth/check-username", async (string username, PraxisDbContext d
     return Results.Ok(new { available = !exists });
 });
 
+// --- Course endpoints ---
+
+app.MapGet("/api/auth/courses", async (PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var courses = await db.UserCourses
+        .Where(uc => uc.UserId == dbUser.Id)
+        .Include(uc => uc.Course)
+        .Include(uc => uc.Semester)
+        .Select(uc => new { uc.Course!.Id, uc.Course.SubjectCode, uc.Course.CourseNumber, uc.Course.CourseName, SemesterName = uc.Semester != null ? uc.Semester.Name : null })
+        .ToListAsync();
+
+    return Results.Ok(courses);
+})
+.RequireAuthorization();
+
+app.MapPut("/api/auth/courses", async (PraxisDbContext db, ClaimsPrincipal user, List<Guid> courseIds) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var existing = await db.UserCourses.Where(uc => uc.UserId == dbUser.Id).ToListAsync();
+    db.UserCourses.RemoveRange(existing);
+
+    foreach (var courseId in courseIds)
+    {
+        db.UserCourses.Add(new PraxisApi.Models.UserCourse { UserId = dbUser.Id, CourseId = courseId });
+    }
+
+    await db.SaveChangesAsync();
+
+    var courses = await db.UserCourses
+        .Where(uc => uc.UserId == dbUser.Id)
+        .Include(uc => uc.Course)
+        .Select(uc => new { uc.Course!.Id, uc.Course.SubjectCode, uc.Course.CourseNumber, uc.Course.CourseName })
+        .ToListAsync();
+
+    return Results.Ok(courses);
+})
+.RequireAuthorization();
+
+app.MapGet("/api/courses", async (PraxisDbContext db, string? subject) =>
+{
+    var query = db.Courses.AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(subject))
+        query = query.Where(c => c.SubjectCode == subject.ToUpper());
+
+    return await query
+        .OrderBy(c => c.SubjectCode)
+        .ThenBy(c => c.CourseNumber)
+        .Select(c => new { c.Id, c.SubjectCode, c.CourseNumber, c.CourseName, c.CrossListGroup })
+        .ToListAsync();
+});
+
+app.MapGet("/api/semesters", async (PraxisDbContext db) =>
+{
+    return await db.Semesters
+        .OrderByDescending(s => s.Year)
+        .ThenByDescending(s => s.Term)
+        .Select(s => new { s.Id, s.Name, s.Year, s.Term })
+        .ToListAsync();
+});
+
+// --- Review endpoints ---
+
+app.MapGet("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbContext db) =>
+{
+    var reviews = await db.Reviews
+        .Where(r => r.RevieweeId == userId)
+        .Include(r => r.Reviewer)
+        .OrderByDescending(r => r.CreatedAt)
+        .Select(r => new
+        {
+            r.Id,
+            r.Rating,
+            r.Comment,
+            r.CreatedAt,
+            ReviewerName = r.Reviewer != null ? $"{r.Reviewer.FirstName} {r.Reviewer.LastName}" : "Unknown",
+            ReviewerUsername = r.Reviewer != null ? r.Reviewer.Username : "unknown",
+        })
+        .ToListAsync();
+
+    var avgRating = reviews.Count > 0 ? reviews.Average(r => r.Rating) : 0;
+
+    return Results.Ok(new { reviews, averageRating = Math.Round(avgRating, 1), totalReviews = reviews.Count });
+});
+
 // --- Listing endpoints ---
 
 app.MapGet("/api/listings", async (
@@ -154,11 +305,16 @@ app.MapGet("/api/listings", async (
     string? category,
     string? sort,
     decimal? minPrice,
-    decimal? maxPrice) =>
+    decimal? maxPrice,
+    Guid? sellerId,
+    string? status) =>
 {
     var query = db.Listings
-        .Where(l => l.Status == "active")
+        .Where(l => l.Status == (status ?? "active"))
         .AsQueryable();
+
+    if (sellerId.HasValue)
+        query = query.Where(l => l.SellerId == sellerId.Value);
 
     if (!string.IsNullOrWhiteSpace(search))
         query = query.Where(l => l.Title.ToLower().Contains(search.ToLower()));
@@ -235,3 +391,5 @@ app.MapGet("/api/messages/{userId:guid}", async (Guid userId, PraxisDbContext db
 .RequireAuthorization();
 
 app.Run();
+
+record ProfileUpdateRequest(string? FirstName, string? LastName, string? Username, string? Bio, string? PreferredPaymentMethods, string? ProfileImageUrl);
