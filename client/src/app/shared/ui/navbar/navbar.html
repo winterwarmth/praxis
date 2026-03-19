@@ -34,5 +34,14 @@
       <ng-icon name="lucideLeaf"></ng-icon>
       <span>For You</span>
     </a>
+    <a routerLink="/listing/create"
+       routerLinkActive="active"
+       [routerLinkActiveOptions]="{exact: true}"
+       ariaCurrentWhenActive="page"
+       draggable="false"
+       (click)="closeMenu()">
+      <ng-icon name="lucidePlusCircle"></ng-icon>
+      <span>Sell</span>
+    </a>
   </div>
 </nav>
