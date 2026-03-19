@@ -272,7 +272,7 @@
           @if (l.seller; as seller) {
             <div class="section">
               <h2>Seller</h2>
-              <a class="seller-card" [routerLink]="['/user', seller.id]">
+              <a class="seller-card" [routerLink]="['/u', seller.username]">
                 <div class="seller-avatar">
                   @if (seller.profileImageUrl) {
                     <img [src]="seller.profileImageUrl" [alt]="seller.firstName" />

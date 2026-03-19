@@ -292,6 +292,26 @@ app.MapPost("/api/semesters/find-or-create", async (PraxisDbContext db, FindOrCr
     return Results.Ok(new { semester.Id });
 });
 
+app.MapGet("/api/users/by-username/{username}", async (string username, PraxisDbContext db) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
+    if (user == null)
+        return Results.NotFound();
+
+    return Results.Ok(new
+    {
+        user.Id,
+        user.Email,
+        user.Username,
+        user.FirstName,
+        user.LastName,
+        user.ProfileImageUrl,
+        user.Role,
+        user.Bio,
+        user.PreferredPaymentMethods,
+    });
+});
+
 // --- Review endpoints ---
 
 app.MapGet("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbContext db) =>
