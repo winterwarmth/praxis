@@ -4,6 +4,9 @@ export interface SavedItem {
   id: string;
   title: string;
   description?: string;
+  imageUrl?: string | null;
+  price?: number;
+  condition?: string | null;
 }
 
 const STORAGE_KEY = 'praxis_saved_items';

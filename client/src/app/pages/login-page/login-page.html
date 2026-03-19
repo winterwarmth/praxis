@@ -1,1 +1,44 @@
-<p>login-page works!</p>
+<div class="login-container">
+  <div class="login-card">
+    <h1 class="title-straight">Log in</h1>
+    <svg class="title-curved" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <path id="curve" d="M 100,250 A 150,150 0 0,1 400,250" fill="none" />
+      </defs>
+      <text>
+        <textPath href="#curve" startOffset="50%" text-anchor="middle">Log in</textPath>
+      </text>
+    </svg>
+    <form (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="emailOrUsername">Email or Username</label>
+        <input
+          id="emailOrUsername"
+          type="text"
+          placeholder="you@example.edu"
+          [(ngModel)]="emailOrUsername"
+          name="emailOrUsername"
+          required
+        />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          placeholder="Enter your password"
+          [(ngModel)]="password"
+          name="password"
+          required
+        />
+      </div>
+      @if (errorMessage()) {
+        <p class="error-message">{{ errorMessage() }}</p>
+      }
+      <button type="submit" class="login-btn" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Logging in...' : 'Log in' }}
+      </button>
+    </form>
+    <p class="signup-link">Don't have an account? <a routerLink="/apply">Apply</a></p>
+  </div>
+</div>

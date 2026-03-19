@@ -1,0 +1,151 @@
+.apply-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+}
+
+.apply-card {
+  width: 100%;
+  height: auto;
+  min-height: 100vh;
+  border-radius: 0;
+  background-color: #1c2230;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  transition: border-radius 0.3s ease, background-color 0.3s ease 0.2s, width 0.3s ease, padding 0.3s ease, min-height 0.3s ease;
+  position: relative;
+
+  @media (min-width: 900px) {
+    width: 450px;
+    height: auto;
+    min-height: 0;
+    border-radius: 1.5rem;
+    background-color: #1a2d5a;
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    padding: 3rem;
+  }
+
+  h1 {
+    margin: 0 0 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  form {
+    width: 100%;
+  }
+}
+
+.form-group {
+  margin-bottom: 0.75rem;
+
+  label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.8rem;
+    color: #a0a8b8;
+  }
+
+  input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #2a3244;
+    border-radius: 8px;
+    background-color: #151921;
+    color: #e0e0e0;
+    font-family: inherit;
+    font-size: 0.875rem;
+    box-sizing: border-box;
+
+    &::placeholder {
+      color: #555e6e;
+    }
+
+    &:focus {
+      outline: none;
+    }
+  }
+}
+
+.field-error {
+  color: #ff6b6b;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.field-success {
+  color: #51cf66;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.field-checking {
+  color: #a0a8b8;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.error-message {
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  text-align: center;
+  margin: 0 0 0.5rem;
+}
+
+.success-message {
+  color: #51cf66;
+  font-size: 0.8rem;
+  text-align: center;
+  margin: 0 0 0.5rem;
+}
+
+.apply-btn {
+  width: 100%;
+  padding: 0.625rem;
+  margin-top: 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background-color: #4a7cff;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #3a6ae0;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.login-link {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #a0a8b8;
+
+  a {
+    color: #4a7cff;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.25rem 0.55rem;
+    border-radius: 0.75rem;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: #FECC02;
+      border-color: transparent;
+      color: #fff;
+    }
+  }
+}

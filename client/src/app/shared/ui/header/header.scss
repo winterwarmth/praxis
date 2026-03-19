@@ -41,6 +41,36 @@ header {
   }
 }
 
+.profile-link {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1rem;
+  color: var(--text-color);
+  text-decoration: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: var(--primary-color);
+  }
+
+  .profile-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+}
+
+.logout-btn {
+  font-size: 1.25rem;
+
+  &:hover {
+    color: #ff6b6b;
+  }
+}
+
+
 @media (max-width: 768px) {
   header {
     grid-template-columns: 1fr auto auto;

@@ -1,0 +1,406 @@
+.profile-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.profile-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1c2230;
+  font-size: 4rem;
+  color: #a0a8b8;
+  flex-shrink: 0;
+  position: relative;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  &.editable {
+    cursor: pointer;
+
+    &:hover .avatar-overlay {
+      opacity: 1;
+    }
+  }
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.profile-info-wrapper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.edit-btn {
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+}
+
+.profile-info {
+  h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  .username {
+    margin: 0.25rem 0 0.5rem;
+    color: #a0a8b8;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+  background-color: #3558a8;
+  color: #fff;
+
+  &.faculty {
+    background-color: #2f9e44;
+  }
+}
+
+.profile-details {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  background-color: #1c2230;
+  border-radius: 0.75rem;
+
+  .detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #a0a8b8;
+    font-size: 0.875rem;
+
+    & + .detail-item {
+      margin-top: 0.75rem;
+    }
+  }
+
+  .bio {
+    margin: 0;
+    color: #e0e0e0;
+  }
+}
+
+.edit-name-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.edit-field {
+  margin-top: 0.75rem;
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: #a0a8b8;
+    margin-bottom: 0.25rem;
+  }
+}
+
+.edit-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #2a3244;
+  border-radius: 8px;
+  background-color: #151921;
+  color: #e0e0e0;
+  font-family: inherit;
+  font-size: 0.875rem;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: #555e6e;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #4a7cff;
+  }
+}
+
+.edit-textarea {
+  @extend .edit-input;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.field-success {
+  color: #51cf66;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.field-error {
+  color: #ff6b6b;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.field-note {
+  color: #a0a8b8;
+  font-size: 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.edit-input.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.btn {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-primary {
+  background-color: #4a7cff;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background-color: #3a6ae0;
+  }
+}
+
+.btn-secondary {
+  background-color: #2a3244;
+  color: #e0e0e0;
+
+  &:hover {
+    background-color: #343e52;
+  }
+}
+
+.profile-section {
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+.empty-text {
+  color: #a0a8b8;
+  font-size: 0.875rem;
+}
+
+.payment-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.course-search {
+  margin-bottom: 0.75rem;
+}
+
+.course-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #e0e0e0;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    accent-color: #4a7cff;
+  }
+}
+
+.payment-tags,
+.course-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.payment-tag,
+.course-tag {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  background-color: #1c2230;
+  color: #e0e0e0;
+}
+
+.rating-summary {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #a0a8b8;
+}
+
+.stars {
+  color: #FECC02;
+  letter-spacing: 1px;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.review-item {
+  padding: 1rem;
+  background-color: #1c2230;
+  border-radius: 0.75rem;
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+
+  .review-author {
+    color: #a0a8b8;
+    font-size: 0.8rem;
+  }
+}
+
+.review-comment {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #e0e0e0;
+}
+
+.listings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.listing-toggle {
+  display: flex;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #2a3244;
+}
+
+.toggle-btn {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+  border: none;
+  background-color: #151921;
+  color: #a0a8b8;
+  cursor: pointer;
+
+  &.active {
+    background-color: #4a7cff;
+    color: #fff;
+  }
+}
+
+.profile-listings {
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+  }
+
+  .no-listings {
+    color: #a0a8b8;
+    font-size: 0.875rem;
+  }
+}
+
+.listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .profile-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .edit-name-row {
+    flex-direction: column;
+  }
+}

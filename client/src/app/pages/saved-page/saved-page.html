@@ -1,37 +1,46 @@
 <section class="saved-page">
   <header class="saved-header">
-    <h1>Saved listings</h1>
+    <h1>Saved Listings</h1>
 
     @if (items().length > 0) {
-      <button type="button" class="clear-button" (click)="clearAll()">
-        Clear all
+      <button
+        type="button"
+        class="clear-button"
+        [class.confirming]="confirmingClear()"
+        (click)="clearAll()"
+        (mouseenter)="keepConfirming()"
+        (mouseleave)="delayCancelClear()"
+      >
+        {{ confirmingClear() ? 'Confirm?' : 'Clear all' }}
       </button>
     }
   </header>
 
   @if (items().length === 0) {
     <p class="empty-state">
-      You haven’t saved any listings yet. Tap the Save button on a listing to keep it here for later.
+      You haven't saved any listings yet. Tap the Save button on a listing to keep it here for later.
     </p>
   } @else {
-    <ul class="saved-list">
+    <div class="saved-grid">
       @for (item of items(); track item.id) {
-        <li class="saved-item">
-          <a [routerLink]="['/listing', item.id]" class="saved-link">
-            <h2>{{ item.title }}</h2>
-            @if (item.description) {
-              <p>{{ item.description }}</p>
-            }
-          </a>
+        <div class="saved-card-wrapper">
+          <app-listing-card
+            [id]="item.id"
+            [title]="item.title"
+            [price]="item.price ?? 0"
+            [category]="''"
+            [imageUrl]="item.imageUrl ?? null"
+            [condition]="item.condition ?? null"
+          />
           <button
             type="button"
-            class="remove-button"
-            (click)="remove(item.id)"
+            class="remove-btn"
+            (click)="remove($event, item.id)"
           >
-            Remove
+            <ng-icon name="lucideX" size="14"></ng-icon>
           </button>
-        </li>
+        </div>
       }
-    </ul>
+    </div>
   }
 </section>
