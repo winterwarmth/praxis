@@ -20,6 +20,12 @@ api/appsettings.Development.json
 # mise
 .mise.local.toml
 
+# VS Code
+.vscode/
+
+# Supabase CLI
+supabase/
+
 # JetBrains IDEs
 .idea/
 
