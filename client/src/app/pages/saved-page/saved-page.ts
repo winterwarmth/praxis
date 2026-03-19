@@ -1,11 +1,12 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { NgIcon } from '@ng-icons/core';
 
-import { RouterLink } from '@angular/router';
 import { SavedItemsService } from '../../shared/services/saved-items.service';
+import { ListingCard } from '../../shared/ui/listing-card/listing-card';
 
 @Component({
   selector: 'app-saved-page',
-  imports: [RouterLink],
+  imports: [ListingCard, NgIcon],
   templateUrl: './saved-page.html',
   styleUrl: './saved-page.scss',
 })
@@ -13,12 +14,47 @@ export class SavedPage {
   private readonly savedItems = inject(SavedItemsService);
 
   protected readonly items = computed(() => this.savedItems.items());
+  protected readonly confirmingClear = signal(false);
 
-  protected remove(id: string): void {
+  protected remove(event: Event, id: string): void {
+    event.preventDefault();
+    event.stopPropagation();
     this.savedItems.remove(id);
   }
 
+  private cancelTimer: ReturnType<typeof setTimeout> | null = null;
+  private autoResetTimer: ReturnType<typeof setTimeout> | null = null;
+
   protected clearAll(): void {
-    this.savedItems.clear();
+    if (this.confirmingClear()) {
+      this.savedItems.clear();
+      this.confirmingClear.set(false);
+      this.clearTimers();
+    } else {
+      this.confirmingClear.set(true);
+      this.autoResetTimer = setTimeout(() => {
+        this.confirmingClear.set(false);
+        this.autoResetTimer = null;
+      }, 3000);
+    }
+  }
+
+  protected delayCancelClear(): void {
+    this.cancelTimer = setTimeout(() => {
+      this.confirmingClear.set(false);
+      this.clearTimers();
+    }, 1000);
+  }
+
+  protected keepConfirming(): void {
+    if (this.cancelTimer) {
+      clearTimeout(this.cancelTimer);
+      this.cancelTimer = null;
+    }
+  }
+
+  private clearTimers(): void {
+    if (this.cancelTimer) { clearTimeout(this.cancelTimer); this.cancelTimer = null; }
+    if (this.autoResetTimer) { clearTimeout(this.autoResetTimer); this.autoResetTimer = null; }
   }
 }

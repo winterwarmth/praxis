@@ -121,6 +121,12 @@ export class ListingDetailPage implements OnInit {
   protected toggleSave(): void {
     const l = this.listing();
     if (!l) return;
-    this.savedItems.toggleSave({ id: l.id, title: l.title });
+    this.savedItems.toggleSave({
+      id: l.id,
+      title: l.title,
+      imageUrl: l.images[0]?.imageUrl ?? null,
+      price: l.price,
+      condition: l.condition,
+    });
   }
 }
