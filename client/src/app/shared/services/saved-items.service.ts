@@ -32,6 +32,13 @@ export class SavedItemsService {
     this.persist();
   }
 
+  update(id: string, data: Partial<SavedItem>): void {
+    this._items.update((items) =>
+      items.map((item) => (item.id === id ? { ...item, ...data } : item))
+    );
+    this.persist();
+  }
+
   remove(id: string): void {
     this._items.update((items) => items.filter((i) => i.id !== id));
     this.persist();

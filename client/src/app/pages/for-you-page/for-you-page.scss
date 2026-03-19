@@ -1,0 +1,62 @@
+.for-you-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.subtitle {
+  color: #a0a8b8;
+  font-size: 0.85rem;
+  margin: 0.25rem 0 1.5rem;
+}
+
+.loading {
+  color: #a0a8b8;
+}
+
+.empty-state {
+  color: #a0a8b8;
+  font-size: 0.9rem;
+  line-height: 1.6;
+
+  .link {
+    color: #4a7cff;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 220px);
+  gap: 1.25rem;
+}
+
+.for-you-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.matched-courses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem 0;
+}
+
+.matched-tag {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  background-color: rgba(74, 124, 255, 0.12);
+  color: #7ca3ff;
+}

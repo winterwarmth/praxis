@@ -273,6 +273,72 @@ app.MapGet("/api/semesters", async (PraxisDbContext db) =>
         .ToListAsync();
 });
 
+app.MapGet("/api/listings/for-you", async (PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var userCourseIds = await db.UserCourses
+        .Where(uc => uc.UserId == dbUser.Id)
+        .Select(uc => uc.CourseId)
+        .ToListAsync();
+
+    if (userCourseIds.Count == 0)
+        return Results.Ok(Array.Empty<object>());
+
+    // Determine current semester from today's date
+    var now = DateTime.UtcNow;
+    var currentTerm = now.Month switch
+    {
+        >= 1 and <= 5 => "spring",
+        >= 6 and <= 7 => "summer",
+        _ => "fall"
+    };
+    var currentYear = now.Year;
+
+    // Find the current semester ID if it exists
+    var currentSemesterId = await db.Semesters
+        .Where(s => s.Term == currentTerm && s.Year == currentYear)
+        .Select(s => (Guid?)s.Id)
+        .FirstOrDefaultAsync();
+
+    var listings = await db.Listings
+        .Where(l => l.Status == "active" && l.SellerId != dbUser.Id)
+        .Where(l => l.ListingCourses.Any(lc => userCourseIds.Contains(lc.CourseId)))
+        // No semesters = applicable to all, or includes current semester
+        .Where(l => !l.ListingSemesters.Any() ||
+            (currentSemesterId.HasValue && l.ListingSemesters.Any(ls => ls.SemesterId == currentSemesterId.Value)))
+        .OrderByDescending(l => l.CreatedAt)
+        .Select(l => new
+        {
+            l.Id,
+            l.SellerId,
+            l.Title,
+            l.Description,
+            l.Price,
+            l.Category,
+            l.Condition,
+            l.Status,
+            l.CreatedAt,
+            l.UpdatedAt,
+            ImageUrl = l.Images.OrderBy(i => i.DisplayOrder).Select(i => i.ImageUrl).FirstOrDefault(),
+            MatchedCourses = l.ListingCourses
+                .Where(lc => userCourseIds.Contains(lc.CourseId))
+                .Select(lc => new { lc.Course!.SubjectCode, lc.Course.CourseNumber })
+                .ToList()
+        })
+        .ToListAsync();
+
+    return Results.Ok(listings);
+})
+.RequireAuthorization();
+
 app.MapPost("/api/semesters/find-or-create", async (PraxisDbContext db, FindOrCreateSemester body) =>
 {
     var existing = await db.Semesters.FirstOrDefaultAsync(s => s.Term == body.Term && s.Year == body.Year);

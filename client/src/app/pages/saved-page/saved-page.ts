@@ -32,6 +32,13 @@ export class SavedPage implements OnInit {
           if (listing.status === 'sold') {
             this.soldIds.update((set) => { const s = new Set(set); s.add(id); return s; });
           }
+          // Refresh saved data with latest from API
+          this.savedItems.update(id, {
+            title: listing.title,
+            imageUrl: listing.images[0]?.imageUrl ?? null,
+            price: listing.price,
+            condition: listing.condition,
+          });
         },
         error: () => {},
       });
