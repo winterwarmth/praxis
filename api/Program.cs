@@ -395,6 +395,167 @@ app.MapGet("/api/listings/{id:guid}", async (Guid id, PraxisDbContext db) =>
     return Results.Ok(listing);
 });
 
+app.MapPost("/api/listings", async (PraxisDbContext db, ClaimsPrincipal user, HttpContext context) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound("User not found.");
+
+    var body = await context.Request.ReadFromJsonAsync<CreateListingRequest>();
+    if (body == null || string.IsNullOrWhiteSpace(body.Title) || string.IsNullOrWhiteSpace(body.Category))
+        return Results.BadRequest("Title and category are required.");
+
+    var listing = new PraxisApi.Models.Listing
+    {
+        Id = Guid.NewGuid(),
+        SellerId = dbUser.Id,
+        Title = body.Title.Trim(),
+        Description = body.Description?.Trim(),
+        Price = body.Price,
+        Category = body.Category.ToLower(),
+        Condition = body.Condition,
+        Status = "active",
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow,
+    };
+
+    db.Listings.Add(listing);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/api/listings/{listing.Id}", new { listing.Id });
+})
+.RequireAuthorization();
+
+app.MapPut("/api/listings/{id:guid}", async (Guid id, PraxisDbContext db, ClaimsPrincipal user, HttpContext context) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == id && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var body = await context.Request.ReadFromJsonAsync<UpdateListingRequest>();
+    if (body == null)
+        return Results.BadRequest();
+
+    if (!string.IsNullOrWhiteSpace(body.Title)) listing.Title = body.Title.Trim();
+    if (body.Description != null) listing.Description = body.Description.Trim();
+    if (body.Price.HasValue) listing.Price = body.Price.Value;
+    if (!string.IsNullOrWhiteSpace(body.Category)) listing.Category = body.Category.ToLower();
+    if (body.Condition != null) listing.Condition = body.Condition;
+    if (!string.IsNullOrWhiteSpace(body.Status)) listing.Status = body.Status;
+
+    listing.UpdatedAt = DateTime.UtcNow;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { listing.Id });
+})
+.RequireAuthorization();
+
+app.MapPost("/api/listings/{id:guid}/images", async (Guid id, PraxisDbContext db, ClaimsPrincipal user, List<string> imageUrls) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == id && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var maxOrder = await db.ListingImages
+        .Where(i => i.ListingId == id)
+        .OrderByDescending(i => i.DisplayOrder)
+        .Select(i => (int?)i.DisplayOrder)
+        .FirstOrDefaultAsync() ?? -1;
+
+    for (var i = 0; i < imageUrls.Count; i++)
+    {
+        db.ListingImages.Add(new PraxisApi.Models.ListingImage
+        {
+            Id = Guid.NewGuid(),
+            ListingId = id,
+            ImageUrl = imageUrls[i],
+            DisplayOrder = maxOrder + 1 + i,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapPut("/api/listings/{listingId:guid}/images/reorder", async (Guid listingId, PraxisDbContext db, ClaimsPrincipal user, List<Guid> imageIds) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == listingId && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    for (var i = 0; i < imageIds.Count; i++)
+    {
+        var image = await db.ListingImages.FirstOrDefaultAsync(img => img.Id == imageIds[i] && img.ListingId == listingId);
+        if (image != null)
+        {
+            image.DisplayOrder = i;
+            await db.SaveChangesAsync();
+        }
+    }
+
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapDelete("/api/listings/{listingId:guid}/images/{imageId:guid}", async (Guid listingId, Guid imageId, PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == listingId && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var image = await db.ListingImages.FirstOrDefaultAsync(i => i.Id == imageId && i.ListingId == listingId);
+    if (image == null)
+        return Results.NotFound();
+
+    db.ListingImages.Remove(image);
+    await db.SaveChangesAsync();
+
+    return Results.Ok();
+})
+.RequireAuthorization();
+
 // --- Message endpoints ---
 
 app.MapGet("/api/messages/{userId:guid}", async (Guid userId, PraxisDbContext db) =>
@@ -435,3 +596,5 @@ app.MapGet("/api/messages/{userId:guid}", async (Guid userId, PraxisDbContext db
 app.Run();
 
 record ProfileUpdateRequest(string? FirstName, string? LastName, string? Username, string? Bio, string? PreferredPaymentMethods, string? ProfileImageUrl);
+record CreateListingRequest(string Title, string? Description, decimal Price, string Category, string? Condition, List<string>? ImageUrls);
+record UpdateListingRequest(string? Title, string? Description, decimal? Price, string? Category, string? Condition, string? Status);

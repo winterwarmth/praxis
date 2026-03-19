@@ -1,1 +1,109 @@
-<p>create-listing-page works!</p>
+<div class="create-listing">
+  <h1>Create a Listing</h1>
+
+  <div class="form-group">
+    <label for="title">Title</label>
+    <input
+      id="title"
+      type="text"
+      [(ngModel)]="title"
+      placeholder="What are you selling?"
+      class="form-input"
+      maxlength="120"
+    />
+  </div>
+
+  <div class="form-group">
+    <label for="description">Description</label>
+    <textarea
+      id="description"
+      [(ngModel)]="description"
+      placeholder="Describe your item, condition, pickup details, etc."
+      class="form-input form-textarea"
+      rows="4"
+    ></textarea>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label for="price">Price</label>
+      <input
+        id="price"
+        type="text"
+        inputmode="decimal"
+        [(ngModel)]="price"
+        placeholder="0.00"
+        class="form-input"
+        (keydown)="filterPriceInput($event)"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="category">Category</label>
+      <select id="category" [(ngModel)]="category" class="form-input">
+        <option value="" disabled>Select category</option>
+        @for (cat of categories; track cat) {
+          <option [value]="cat.toLowerCase()">{{ cat }}</option>
+        }
+      </select>
+    </div>
+
+    @if (category !== 'services' && category !== 'food' && category !== 'rent') {
+      <div class="form-group">
+        <label for="condition">Condition</label>
+        <select id="condition" [(ngModel)]="condition" class="form-input">
+          <option value="">None</option>
+          @for (cond of conditions; track cond.value) {
+            <option [value]="cond.value">{{ cond.label }}</option>
+          }
+        </select>
+      </div>
+    }
+  </div>
+
+  <div class="form-group">
+    <label>Images (up to 5)</label>
+    <div class="image-upload-area">
+      @if (images().length < 5) {
+        <label class="upload-btn" for="imageInput">
+          <span class="upload-label"><ng-icon name="lucideCamera" size="20"></ng-icon> Add Photos</span>
+        </label>
+        <input
+          id="imageInput"
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          (change)="onImagesSelected($event)"
+        />
+      }
+    </div>
+    @if (images().length > 0) {
+      <div class="image-previews">
+        @for (img of images(); track img.url; let i = $index) {
+          <div class="preview-item">
+            <img [src]="img.url" alt="Preview" />
+            <button class="remove-img" (click)="removeImage(i)">
+              <ng-icon name="lucideX" size="14"></ng-icon>
+            </button>
+            @if (i === 0) {
+              <span class="cover-badge">Cover</span>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="error-message">{{ error() }}</p>
+  }
+
+  <button
+    class="submit-btn"
+    (click)="submit()"
+    [disabled]="submitting()"
+  >
+    {{ submitting() ? 'Posting...' : 'Post Listing' }}
+  </button>
+</div>

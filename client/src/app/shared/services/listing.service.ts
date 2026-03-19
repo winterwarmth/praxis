@@ -82,4 +82,29 @@ export class ListingService {
   getListing(id: string): Observable<ListingDetail> {
     return this.http.get<ListingDetail>(`/api/listings/${id}`);
   }
+
+  createListing(data: {
+    title: string;
+    description?: string;
+    price: number;
+    category: string;
+    condition?: string;
+  }): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>('/api/listings', data);
+  }
+
+  addListingImages(listingId: string, imageUrls: string[]): Observable<void> {
+    return this.http.post<void>(`/api/listings/${listingId}/images`, imageUrls);
+  }
+
+  updateListing(id: string, data: {
+    title?: string;
+    description?: string;
+    price?: number;
+    category?: string;
+    condition?: string;
+    status?: string;
+  }): Observable<{ id: string }> {
+    return this.http.put<{ id: string }>(`/api/listings/${id}`, data);
+  }
 }
