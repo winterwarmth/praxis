@@ -58,6 +58,26 @@
 
 .saved-card-wrapper {
   position: relative;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  transition: border-color 0.15s ease;
+
+  &.sold {
+    border-color: rgba(244, 114, 140, 0.5);
+  }
+}
+
+.sold-label {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Cascadia Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background-color: rgba(192, 57, 75, 0.85);
+  color: #fff;
 }
 
 .remove-btn {
