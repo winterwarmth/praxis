@@ -106,11 +106,6 @@ export class UserPage implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.http.get<{ id: string }>('/api/auth/me').subscribe({
-      next: (me) => this.currentUserId.set(me.id),
-      error: () => {},
-    });
-
     this.route.paramMap.subscribe((params) => {
       const username = params.get('username');
       if (username) {
@@ -131,11 +126,17 @@ export class UserPage implements OnInit, OnDestroy {
         this.http.get<ReviewsResponse>(`/api/users/${user.id}/reviews`)
           .subscribe((data) => this.reviewsData.set(data));
 
-        // Load courses for this user
-        if (this.isOwner()) {
-          this.http.get<CourseInfo[]>('/api/auth/courses')
-            .subscribe((courses) => this.courses.set(courses));
-        }
+        // Load courses — check ownership after currentUserId is available
+        this.http.get<{ id: string }>('/api/auth/me').subscribe({
+          next: (me) => {
+            this.currentUserId.set(me.id);
+            if (me.id === user.id) {
+              this.http.get<CourseInfo[]>('/api/auth/courses')
+                .subscribe((courses) => this.courses.set(courses));
+            }
+          },
+          error: () => {},
+        });
       },
       error: () => {
         this.loading.set(false);
