@@ -273,6 +273,25 @@ app.MapGet("/api/semesters", async (PraxisDbContext db) =>
         .ToListAsync();
 });
 
+app.MapPost("/api/semesters/find-or-create", async (PraxisDbContext db, FindOrCreateSemester body) =>
+{
+    var existing = await db.Semesters.FirstOrDefaultAsync(s => s.Term == body.Term && s.Year == body.Year);
+    if (existing != null)
+        return Results.Ok(new { existing.Id });
+
+    var semester = new PraxisApi.Models.Semester
+    {
+        Id = Guid.NewGuid(),
+        Name = body.Name,
+        Year = body.Year,
+        Term = body.Term,
+    };
+    db.Semesters.Add(semester);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { semester.Id });
+});
+
 // --- Review endpoints ---
 
 app.MapGet("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbContext db) =>
@@ -307,7 +326,8 @@ app.MapGet("/api/listings", async (
     decimal? minPrice,
     decimal? maxPrice,
     Guid? sellerId,
-    string? status) =>
+    string? status,
+    Guid? courseId) =>
 {
     var query = db.Listings
         .Where(l => l.Status == (status ?? "active"))
@@ -327,6 +347,9 @@ app.MapGet("/api/listings", async (
 
     if (maxPrice.HasValue)
         query = query.Where(l => l.Price <= maxPrice.Value);
+
+    if (courseId.HasValue)
+        query = query.Where(l => l.ListingCourses.Any(lc => lc.CourseId == courseId.Value));
 
     query = sort switch
     {
@@ -385,7 +408,13 @@ app.MapGet("/api/listings/{id:guid}", async (Guid id, PraxisDbContext db) =>
                     u.Role,
                     u.PreferredPaymentMethods,
                 })
-                .FirstOrDefault()
+                .FirstOrDefault(),
+            Courses = l.ListingCourses
+                .Select(lc => new { lc.Course!.Id, lc.Course.SubjectCode, lc.Course.CourseNumber, lc.Course.CourseName })
+                .ToList(),
+            Semesters = l.ListingSemesters
+                .Select(ls => new { ls.Semester!.Id, ls.Semester.Name })
+                .ToList()
         })
         .FirstOrDefaultAsync();
 
@@ -501,6 +530,64 @@ app.MapPost("/api/listings/{id:guid}/images", async (Guid id, PraxisDbContext db
 })
 .RequireAuthorization();
 
+app.MapPut("/api/listings/{id:guid}/courses", async (Guid id, PraxisDbContext db, ClaimsPrincipal user, List<Guid> courseIds) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == id && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var existing = await db.ListingCourses.Where(lc => lc.ListingId == id).ToListAsync();
+    db.ListingCourses.RemoveRange(existing);
+    await db.SaveChangesAsync();
+
+    foreach (var courseId in courseIds)
+    {
+        db.ListingCourses.Add(new PraxisApi.Models.ListingCourse { ListingId = id, CourseId = courseId });
+        await db.SaveChangesAsync();
+    }
+
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapPut("/api/listings/{id:guid}/semesters", async (Guid id, PraxisDbContext db, ClaimsPrincipal user, List<Guid> semesterIds) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == id && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var existing = await db.ListingSemesters.Where(ls => ls.ListingId == id).ToListAsync();
+    db.ListingSemesters.RemoveRange(existing);
+    await db.SaveChangesAsync();
+
+    foreach (var semesterId in semesterIds)
+    {
+        db.ListingSemesters.Add(new PraxisApi.Models.ListingSemester { ListingId = id, SemesterId = semesterId });
+        await db.SaveChangesAsync();
+    }
+
+    return Results.Ok();
+})
+.RequireAuthorization();
+
 app.MapPut("/api/listings/{listingId:guid}/images/reorder", async (Guid listingId, PraxisDbContext db, ClaimsPrincipal user, List<Guid> imageIds) =>
 {
     var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -598,3 +685,4 @@ app.Run();
 record ProfileUpdateRequest(string? FirstName, string? LastName, string? Username, string? Bio, string? PreferredPaymentMethods, string? ProfileImageUrl);
 record CreateListingRequest(string Title, string? Description, decimal Price, string Category, string? Condition, List<string>? ImageUrls);
 record UpdateListingRequest(string? Title, string? Description, decimal? Price, string? Category, string? Condition, string? Status);
+record FindOrCreateSemester(string Term, int Year, string Name);

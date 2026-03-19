@@ -77,6 +77,133 @@ select.form-input {
   }
 }
 
+// --- Course picker ---
+.course-dropdown {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-top: 0.35rem;
+  border: 1px solid #2a3244;
+  border-radius: 8px;
+  background-color: #151921;
+}
+
+.course-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
+  color: #e0e0e0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #1c2230;
+  }
+
+  &.selected {
+    color: #4a7cff;
+  }
+}
+
+.course-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.course-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  background-color: #1c2230;
+  color: #e0e0e0;
+}
+
+.semester-add-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.semester-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-add-semester {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background-color: #2a3244;
+  color: #e0e0e0;
+  font-family: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background-color: #343e52;
+  }
+}
+
+.semester-tags-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.semester-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  background-color: rgba(253, 230, 138, 0.12);
+  color: #fde68a;
+  border: 1px solid rgba(253, 230, 138, 0.25);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+
+  &.pending-remove {
+    background-color: rgba(244, 114, 140, 0.15);
+    color: #f4728c;
+    border-color: rgba(244, 114, 140, 0.3);
+  }
+}
+
+.semester-note {
+  display: block;
+  font-size: 0.75rem;
+  color: #555e6e;
+  margin-top: 0.25rem;
+}
+
+.course-tag-remove {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: #a0a8b8;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: #ff6b6b;
+  }
+}
+
 // --- Image upload ---
 .image-upload-area {
   display: flex;

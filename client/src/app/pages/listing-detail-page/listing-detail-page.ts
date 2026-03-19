@@ -6,7 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 
 import { SavedItemsService } from '../../shared/services/saved-items.service';
-import { ListingDetail, ListingImage, ListingService } from '../../shared/services/listing.service';
+import { ListingCourse, ListingDetail, ListingImage, ListingService } from '../../shared/services/listing.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 
 interface ImagePreview {
@@ -75,6 +75,17 @@ export class ListingDetailPage implements OnInit {
   protected readonly editImages = signal<ListingImage[]>([]);
   protected readonly newImagePreviews = signal<ImagePreview[]>([]);
   private removedImageIds: string[] = [];
+
+  // Course editing
+  protected readonly editCourses = signal<ListingCourse[]>([]);
+  protected readonly allCourses = signal<ListingCourse[]>([]);
+  protected readonly filteredCourses = signal<ListingCourse[]>([]);
+  protected readonly courseSearchQuery = signal('');
+  protected readonly editSemesterTags = signal<{ id: string; name: string }[]>([]);
+  protected readonly pendingRemoveSemester = signal<string | null>(null);
+  private semesterResetTimer: ReturnType<typeof setTimeout> | null = null;
+  protected semesterTerm = '';
+  protected semesterYear: number | null = null;
 
   // Drag state
   protected readonly dragIndex = signal<number | null>(null);
@@ -269,6 +280,11 @@ export class ListingDetailPage implements OnInit {
     this.editImages.set([...l.images]);
     this.newImagePreviews.set([]);
     this.removedImageIds = [];
+    this.editCourses.set(l.courses ? [...l.courses] : []);
+    this.courseSearchQuery.set('');
+    this.filteredCourses.set([]);
+    this.http.get<ListingCourse[]>('/api/courses').subscribe((courses) => this.allCourses.set(courses));
+    this.editSemesterTags.set(l.semesters ? l.semesters.map((s) => ({ id: s.id, name: s.name })) : []);
     this.isEditing.set(true);
   }
 
@@ -305,6 +321,84 @@ export class ListingDetailPage implements OnInit {
 
     this.newImagePreviews.set([...this.newImagePreviews(), ...newImages]);
     input.value = '';
+  }
+
+  protected onCourseSearch(query: string): void {
+    this.courseSearchQuery.set(query);
+    const q = query.toLowerCase().trim();
+    if (!q) {
+      this.filteredCourses.set([]);
+      return;
+    }
+    this.filteredCourses.set(
+      this.allCourses().filter((c) =>
+        `${c.subjectCode} ${c.courseNumber}`.toLowerCase().includes(q) ||
+        c.courseName.toLowerCase().includes(q)
+      ).slice(0, 10)
+    );
+  }
+
+  protected isEditCourseSelected(courseId: string): boolean {
+    return this.editCourses().some((c) => c.id === courseId);
+  }
+
+  protected toggleEditCourse(course: ListingCourse): void {
+    if (this.isEditCourseSelected(course.id)) {
+      this.editCourses.set(this.editCourses().filter((c) => c.id !== course.id));
+    } else {
+      this.editCourses.set([...this.editCourses(), course]);
+    }
+  }
+
+  protected removeEditCourse(courseId: string): void {
+    this.editCourses.set(this.editCourses().filter((c) => c.id !== courseId));
+  }
+
+  protected filterYearInput(event: KeyboardEvent): void {
+    const allowed = ['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete'];
+    if (allowed.includes(event.key)) return;
+    if (!/^\d$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  protected addSemester(): void {
+    if (!this.semesterTerm || !this.semesterYear) return;
+    const currentYear = new Date().getFullYear();
+    if (this.semesterYear < 1900 || this.semesterYear > currentYear) return;
+    const name = `${this.semesterTerm.charAt(0).toUpperCase() + this.semesterTerm.slice(1)} ${this.semesterYear}`;
+    const existing = this.editSemesterTags().find((s) => s.name === name);
+    if (existing) return;
+
+    this.http.post<{ id: string }>('/api/semesters/find-or-create', { term: this.semesterTerm, year: this.semesterYear, name }).subscribe({
+      next: (result) => {
+        this.editSemesterTags.set([...this.editSemesterTags(), { id: result.id, name }]);
+        this.semesterTerm = '';
+        this.semesterYear = null;
+      },
+    });
+  }
+
+  protected clickSemester(id: string): void {
+    if (this.pendingRemoveSemester() === id) {
+      this.editSemesterTags.set(this.editSemesterTags().filter((s) => s.id !== id));
+      this.pendingRemoveSemester.set(null);
+      this.clearSemesterTimer();
+    } else {
+      this.clearSemesterTimer();
+      this.pendingRemoveSemester.set(id);
+      this.semesterResetTimer = setTimeout(() => {
+        this.pendingRemoveSemester.set(null);
+        this.semesterResetTimer = null;
+      }, 3000);
+    }
+  }
+
+  private clearSemesterTimer(): void {
+    if (this.semesterResetTimer) {
+      clearTimeout(this.semesterResetTimer);
+      this.semesterResetTimer = null;
+    }
   }
 
   protected async saveEdits(): Promise<void> {
@@ -367,6 +461,20 @@ export class ListingDetailPage implements OnInit {
   }
 
   private finishEditing(listingId: string): void {
+    const courseIds = this.editCourses().map((c) => c.id);
+    this.listingService.setListingCourses(listingId, courseIds).subscribe({
+      next: () => {
+        const semesterIds = this.editSemesterTags().map((s) => s.id);
+        this.listingService.setListingSemesters(listingId, semesterIds).subscribe({
+          next: () => this.completeEditing(listingId),
+          error: () => this.completeEditing(listingId),
+        });
+      },
+      error: () => this.completeEditing(listingId),
+    });
+  }
+
+  private completeEditing(listingId: string): void {
     this.newImagePreviews().forEach((img) => URL.revokeObjectURL(img.url));
     this.newImagePreviews.set([]);
     this.isEditing.set(false);
@@ -398,6 +506,10 @@ export class ListingDetailPage implements OnInit {
     if (this.confirmingDelete() && !target.closest('.btn-delete')) {
       this.confirmingDelete.set(false);
       this.clearDeleteTimers();
+    }
+    if (this.pendingRemoveSemester() && !target.closest('.semester-tag')) {
+      this.pendingRemoveSemester.set(null);
+      this.clearSemesterTimer();
     }
   }
 

@@ -38,4 +38,6 @@ public class Listing
     public DateTime UpdatedAt { get; set; }
 
     public ICollection<ListingImage> Images { get; set; } = [];
+    public ICollection<ListingCourse> ListingCourses { get; set; } = [];
+    public ICollection<ListingSemester> ListingSemesters { get; set; } = [];
 }

@@ -140,6 +140,79 @@
             </select>
           </div>
 
+          <div class="edit-group">
+            <label>Related Courses</label>
+            <input
+              type="text"
+              class="edit-input"
+              placeholder="Search courses (e.g. CSC 4350)"
+              [ngModel]="courseSearchQuery()"
+              (ngModelChange)="onCourseSearch($event)"
+            />
+            @if (filteredCourses().length > 0) {
+              <div class="course-dropdown">
+                @for (course of filteredCourses(); track course.id) {
+                  <button
+                    class="course-option"
+                    [class.selected]="isEditCourseSelected(course.id)"
+                    (click)="toggleEditCourse(course)"
+                  >
+                    {{ course.subjectCode }} {{ course.courseNumber }} — {{ course.courseName }}
+                  </button>
+                }
+              </div>
+            }
+            @if (editCourses().length > 0) {
+              <div class="course-tags">
+                @for (course of editCourses(); track course.id) {
+                  <span class="course-tag">
+                    {{ course.subjectCode }} {{ course.courseNumber }}
+                    <button class="course-tag-remove" (click)="removeEditCourse(course.id)">
+                      <ng-icon name="lucideX" size="12"></ng-icon>
+                    </button>
+                  </span>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="edit-group">
+            <label>Applicable Semesters</label>
+            <div class="semester-add-row">
+              <select [(ngModel)]="semesterTerm" class="edit-input semester-input">
+                <option value="">Term</option>
+                <option value="spring">Spring</option>
+                <option value="summer">Summer</option>
+                <option value="fall">Fall</option>
+              </select>
+              <input
+                type="text"
+                inputmode="numeric"
+                [(ngModel)]="semesterYear"
+                class="edit-input semester-input"
+                placeholder="Year"
+                maxlength="4"
+                (keydown)="filterYearInput($event)"
+              />
+              <button class="btn btn-add-semester" (click)="addSemester()">Add</button>
+            </div>
+            @if (editSemesterTags().length > 0) {
+              <div class="semester-tags-edit">
+                @for (sem of editSemesterTags(); track sem.id) {
+                  <span
+                    class="semester-tag"
+                    [class.pending-remove]="pendingRemoveSemester() === sem.id"
+                    (click)="clickSemester(sem.id); $event.stopPropagation()"
+                  >
+                    {{ sem.name }}
+                  </span>
+                }
+              </div>
+            } @else {
+              <span class="semester-note">No semesters selected = applicable to all</span>
+            }
+          </div>
+
           <div class="edit-actions">
             <button class="btn btn-primary" (click)="saveEdits()" [disabled]="isSaving()">
               {{ isSaving() ? 'Saving...' : 'Save' }}
@@ -235,6 +308,28 @@
               <div class="payment-tags">
                 @for (method of paymentMethods(); track method) {
                   <span class="payment-tag">{{ method }}</span>
+                }
+              </div>
+            </div>
+          }
+
+          @if (l.courses && l.courses.length > 0) {
+            <div class="section">
+              <h2>Related Courses</h2>
+              <div class="course-tags">
+                @for (course of l.courses; track course.id) {
+                  <span class="course-tag">{{ course.subjectCode }} {{ course.courseNumber }}</span>
+                }
+              </div>
+            </div>
+          }
+
+          @if (l.semesters && l.semesters.length > 0) {
+            <div class="section">
+              <h2>Semesters</h2>
+              <div class="semester-tags">
+                @for (sem of l.semesters; track sem.id) {
+                  <span class="semester-tag">{{ sem.name }}</span>
                 }
               </div>
             </div>

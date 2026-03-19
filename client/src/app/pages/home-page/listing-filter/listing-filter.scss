@@ -99,3 +99,50 @@ button {
     color: var(--nav-active-text);
   }
 }
+
+.course-filter {
+  position: relative;
+
+  .course-input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.clear-course {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #a0a8b8;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.25rem;
+
+  &:hover {
+    color: #ff6b6b;
+    background: none;
+  }
+}
+
+.course-results {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.course-result-item {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.75rem;
+
+  &.active {
+    color: #4a7cff;
+    background-color: rgba(74, 124, 255, 0.1);
+  }
+}

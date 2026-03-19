@@ -47,11 +47,29 @@
   }
 
   <h3>Course</h3>
-  <input
-    type="text"
-    class="course-input"
-    placeholder="e.g. CSC 4350"
-    [value]="courseQuery()"
-    (input)="onCourseInput($event)"
-  />
+  <div class="course-filter">
+    <input
+      type="text"
+      class="course-input"
+      placeholder="e.g. CSC 4350"
+      [value]="courseQuery()"
+      (input)="onCourseInput($event)"
+    />
+    @if (selectedCourse()) {
+      <button class="clear-course" (click)="clearCourse()">✕</button>
+    }
+  </div>
+  @if (filteredCourses().length > 0) {
+    <div class="course-results">
+      @for (course of filteredCourses(); track course.id) {
+        <button
+          class="course-result-item"
+          [class.active]="selectedCourse()?.id === course.id"
+          (click)="selectCourse(course)"
+        >
+          {{ course.subjectCode }} {{ course.courseNumber }}
+        </button>
+      }
+    </div>
+  }
 </aside>
