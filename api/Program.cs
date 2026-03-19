@@ -353,6 +353,48 @@ app.MapGet("/api/listings", async (
         .ToListAsync();
 });
 
+app.MapGet("/api/listings/{id:guid}", async (Guid id, PraxisDbContext db) =>
+{
+    var listing = await db.Listings
+        .Where(l => l.Id == id)
+        .Select(l => new
+        {
+            l.Id,
+            l.SellerId,
+            l.Title,
+            l.Description,
+            l.Price,
+            l.Category,
+            l.Condition,
+            l.Status,
+            l.CreatedAt,
+            l.UpdatedAt,
+            Images = l.Images
+                .OrderBy(i => i.DisplayOrder)
+                .Select(i => new { i.Id, i.ImageUrl, i.DisplayOrder })
+                .ToList(),
+            Seller = db.Users
+                .Where(u => u.Id == l.SellerId)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Username,
+                    u.FirstName,
+                    u.LastName,
+                    u.ProfileImageUrl,
+                    u.Role,
+                    u.PreferredPaymentMethods,
+                })
+                .FirstOrDefault()
+        })
+        .FirstOrDefaultAsync();
+
+    if (listing == null)
+        return Results.NotFound();
+
+    return Results.Ok(listing);
+});
+
 // --- Message endpoints ---
 
 app.MapGet("/api/messages/{userId:guid}", async (Guid userId, PraxisDbContext db) =>

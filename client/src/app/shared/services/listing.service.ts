@@ -16,6 +16,37 @@ export interface Listing {
   updatedAt: string;
 }
 
+export interface ListingImage {
+  id: string;
+  imageUrl: string;
+  displayOrder: number;
+}
+
+export interface ListingSeller {
+  id: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  profileImageUrl: string | null;
+  role: string;
+  preferredPaymentMethods: string;
+}
+
+export interface ListingDetail {
+  id: string;
+  sellerId: string;
+  title: string;
+  description: string | null;
+  price: number;
+  category: string;
+  condition: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  images: ListingImage[];
+  seller: ListingSeller | null;
+}
+
 export interface ListingFilters {
   search?: string;
   category?: string;
@@ -46,5 +77,9 @@ export class ListingService {
       params = params.set('status', filters.status);
 
     return this.http.get<Listing[]>('/api/listings', { params });
+  }
+
+  getListing(id: string): Observable<ListingDetail> {
+    return this.http.get<ListingDetail>(`/api/listings/${id}`);
   }
 }
