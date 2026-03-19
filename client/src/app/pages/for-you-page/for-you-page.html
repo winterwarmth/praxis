@@ -1,1 +1,39 @@
-<p>for-you-page works!</p>
+<div class="for-you-page">
+  <h1>For You</h1>
+  <p class="subtitle">Listings related to your courses</p>
+
+  @if (loading()) {
+    <p class="loading">Loading...</p>
+  } @else if (listings().length === 0) {
+    @if (!hasCourses()) {
+      <div class="empty-state">
+        <p>You haven't added any courses to your profile yet.</p>
+        <p>Add courses on your <a routerLink="/u/me" class="link">profile page</a> to see personalized listings here.</p>
+      </div>
+    } @else {
+      <p class="empty-state">No listings match your courses right now. Check back later!</p>
+    }
+  } @else {
+    <div class="listings-grid">
+      @for (listing of listings(); track listing.id) {
+        <div class="for-you-card">
+          <app-listing-card
+            [id]="listing.id"
+            [title]="listing.title"
+            [price]="listing.price"
+            [category]="listing.category"
+            [condition]="listing.condition"
+            [imageUrl]="listing.imageUrl"
+          />
+          @if (listing.matchedCourses.length > 0) {
+            <div class="matched-courses">
+              @for (course of listing.matchedCourses; track course.courseNumber) {
+                <span class="matched-tag">{{ course.subjectCode }} {{ course.courseNumber }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

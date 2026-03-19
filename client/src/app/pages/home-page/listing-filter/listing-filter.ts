@@ -1,4 +1,12 @@
-import { Component, output, signal } from '@angular/core';
+import { Component, inject, OnInit, output, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+
+interface CourseOption {
+  id: string;
+  subjectCode: string;
+  courseNumber: string;
+  courseName: string;
+}
 
 @Component({
   selector: 'app-listing-filter',
@@ -6,7 +14,8 @@ import { Component, output, signal } from '@angular/core';
   templateUrl: './listing-filter.html',
   styleUrl: './listing-filter.scss',
 })
-export class ListingFilter {
+export class ListingFilter implements OnInit {
+  private http = inject(HttpClient);
   readonly sortOptions = [
     { value: 'price-low', label: 'Price: Low to High' },
     { value: 'price-high', label: 'Price: High to Low' }
@@ -33,6 +42,9 @@ export class ListingFilter {
   readonly priceMax = signal<number | null>(null);
   readonly selectedPayments = signal<string[]>([]);
   readonly courseQuery = signal('');
+  readonly allCourses = signal<CourseOption[]>([]);
+  readonly filteredCourses = signal<CourseOption[]>([]);
+  readonly selectedCourse = signal<CourseOption | null>(null);
   readonly sortChange = output<string>();
   readonly select = output<string>();
   readonly priceChange = output<{ min: number | null; max: number | null }>();
@@ -72,9 +84,41 @@ export class ListingFilter {
     this.sortChange.emit(value);
   }
 
+  ngOnInit(): void {
+    this.http.get<CourseOption[]>('/api/courses').subscribe((courses) => this.allCourses.set(courses));
+  }
+
   onCourseInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.courseQuery.set(value);
-    this.courseChange.emit(value);
+    const q = value.toLowerCase().trim();
+    if (!q) {
+      this.filteredCourses.set([]);
+      if (this.selectedCourse()) {
+        this.selectedCourse.set(null);
+        this.courseChange.emit('');
+      }
+      return;
+    }
+    this.filteredCourses.set(
+      this.allCourses().filter((c) =>
+        `${c.subjectCode} ${c.courseNumber}`.toLowerCase().includes(q) ||
+        c.courseName.toLowerCase().includes(q)
+      ).slice(0, 8)
+    );
+  }
+
+  selectCourse(course: CourseOption): void {
+    this.selectedCourse.set(course);
+    this.courseQuery.set(`${course.subjectCode} ${course.courseNumber}`);
+    this.filteredCourses.set([]);
+    this.courseChange.emit(course.id);
+  }
+
+  clearCourse(): void {
+    this.selectedCourse.set(null);
+    this.courseQuery.set('');
+    this.filteredCourses.set([]);
+    this.courseChange.emit('');
   }
 }

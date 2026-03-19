@@ -13,10 +13,18 @@ public class PraxisDbContext(DbContextOptions<PraxisDbContext> options) : DbCont
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<UserCourse> UserCourses => Set<UserCourse>();
     public DbSet<Semester> Semesters => Set<Semester>();
+    public DbSet<ListingCourse> ListingCourses => Set<ListingCourse>();
+    public DbSet<ListingSemester> ListingSemesters => Set<ListingSemester>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<UserCourse>()
             .HasKey(uc => new { uc.UserId, uc.CourseId });
+
+        modelBuilder.Entity<ListingCourse>()
+            .HasKey(lc => new { lc.ListingId, lc.CourseId });
+
+        modelBuilder.Entity<ListingSemester>()
+            .HasKey(ls => new { ls.ListingId, ls.SemesterId });
     }
 }

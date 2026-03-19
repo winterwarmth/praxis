@@ -273,6 +273,111 @@ app.MapGet("/api/semesters", async (PraxisDbContext db) =>
         .ToListAsync();
 });
 
+app.MapGet("/api/listings/for-you", async (PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var userCourseIds = await db.UserCourses
+        .Where(uc => uc.UserId == dbUser.Id)
+        .Select(uc => uc.CourseId)
+        .ToListAsync();
+
+    if (userCourseIds.Count == 0)
+        return Results.Ok(Array.Empty<object>());
+
+    // Determine current semester from today's date
+    var now = DateTime.UtcNow;
+    var currentTerm = now.Month switch
+    {
+        >= 1 and <= 5 => "spring",
+        >= 6 and <= 7 => "summer",
+        _ => "fall"
+    };
+    var currentYear = now.Year;
+
+    // Find the current semester ID if it exists
+    var currentSemesterId = await db.Semesters
+        .Where(s => s.Term == currentTerm && s.Year == currentYear)
+        .Select(s => (Guid?)s.Id)
+        .FirstOrDefaultAsync();
+
+    var listings = await db.Listings
+        .Where(l => l.Status == "active" && l.SellerId != dbUser.Id)
+        .Where(l => l.ListingCourses.Any(lc => userCourseIds.Contains(lc.CourseId)))
+        // No semesters = applicable to all, or includes current semester
+        .Where(l => !l.ListingSemesters.Any() ||
+            (currentSemesterId.HasValue && l.ListingSemesters.Any(ls => ls.SemesterId == currentSemesterId.Value)))
+        .OrderByDescending(l => l.CreatedAt)
+        .Select(l => new
+        {
+            l.Id,
+            l.SellerId,
+            l.Title,
+            l.Description,
+            l.Price,
+            l.Category,
+            l.Condition,
+            l.Status,
+            l.CreatedAt,
+            l.UpdatedAt,
+            ImageUrl = l.Images.OrderBy(i => i.DisplayOrder).Select(i => i.ImageUrl).FirstOrDefault(),
+            MatchedCourses = l.ListingCourses
+                .Where(lc => userCourseIds.Contains(lc.CourseId))
+                .Select(lc => new { lc.Course!.SubjectCode, lc.Course.CourseNumber })
+                .ToList()
+        })
+        .ToListAsync();
+
+    return Results.Ok(listings);
+})
+.RequireAuthorization();
+
+app.MapPost("/api/semesters/find-or-create", async (PraxisDbContext db, FindOrCreateSemester body) =>
+{
+    var existing = await db.Semesters.FirstOrDefaultAsync(s => s.Term == body.Term && s.Year == body.Year);
+    if (existing != null)
+        return Results.Ok(new { existing.Id });
+
+    var semester = new PraxisApi.Models.Semester
+    {
+        Id = Guid.NewGuid(),
+        Name = body.Name,
+        Year = body.Year,
+        Term = body.Term,
+    };
+    db.Semesters.Add(semester);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { semester.Id });
+});
+
+app.MapGet("/api/users/by-username/{username}", async (string username, PraxisDbContext db) =>
+{
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
+    if (user == null)
+        return Results.NotFound();
+
+    return Results.Ok(new
+    {
+        user.Id,
+        user.Email,
+        user.Username,
+        user.FirstName,
+        user.LastName,
+        user.ProfileImageUrl,
+        user.Role,
+        user.Bio,
+        user.PreferredPaymentMethods,
+    });
+});
+
 // --- Review endpoints ---
 
 app.MapGet("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbContext db) =>
@@ -307,7 +412,8 @@ app.MapGet("/api/listings", async (
     decimal? minPrice,
     decimal? maxPrice,
     Guid? sellerId,
-    string? status) =>
+    string? status,
+    Guid? courseId) =>
 {
     var query = db.Listings
         .Where(l => l.Status == (status ?? "active"))
@@ -327,6 +433,9 @@ app.MapGet("/api/listings", async (
 
     if (maxPrice.HasValue)
         query = query.Where(l => l.Price <= maxPrice.Value);
+
+    if (courseId.HasValue)
+        query = query.Where(l => l.ListingCourses.Any(lc => lc.CourseId == courseId.Value));
 
     query = sort switch
     {
@@ -385,7 +494,13 @@ app.MapGet("/api/listings/{id:guid}", async (Guid id, PraxisDbContext db) =>
                     u.Role,
                     u.PreferredPaymentMethods,
                 })
-                .FirstOrDefault()
+                .FirstOrDefault(),
+            Courses = l.ListingCourses
+                .Select(lc => new { lc.Course!.Id, lc.Course.SubjectCode, lc.Course.CourseNumber, lc.Course.CourseName })
+                .ToList(),
+            Semesters = l.ListingSemesters
+                .Select(ls => new { ls.Semester!.Id, ls.Semester.Name })
+                .ToList()
         })
         .FirstOrDefaultAsync();
 
@@ -394,6 +509,225 @@ app.MapGet("/api/listings/{id:guid}", async (Guid id, PraxisDbContext db) =>
 
     return Results.Ok(listing);
 });
+
+app.MapPost("/api/listings", async (PraxisDbContext db, ClaimsPrincipal user, HttpContext context) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound("User not found.");
+
+    var body = await context.Request.ReadFromJsonAsync<CreateListingRequest>();
+    if (body == null || string.IsNullOrWhiteSpace(body.Title) || string.IsNullOrWhiteSpace(body.Category))
+        return Results.BadRequest("Title and category are required.");
+
+    var listing = new PraxisApi.Models.Listing
+    {
+        Id = Guid.NewGuid(),
+        SellerId = dbUser.Id,
+        Title = body.Title.Trim(),
+        Description = body.Description?.Trim(),
+        Price = body.Price,
+        Category = body.Category.ToLower(),
+        Condition = body.Condition,
+        Status = "active",
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow,
+    };
+
+    db.Listings.Add(listing);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/api/listings/{listing.Id}", new { listing.Id });
+})
+.RequireAuthorization();
+
+app.MapPut("/api/listings/{id:guid}", async (Guid id, PraxisDbContext db, ClaimsPrincipal user, HttpContext context) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == id && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var body = await context.Request.ReadFromJsonAsync<UpdateListingRequest>();
+    if (body == null)
+        return Results.BadRequest();
+
+    if (!string.IsNullOrWhiteSpace(body.Title)) listing.Title = body.Title.Trim();
+    if (body.Description != null) listing.Description = body.Description.Trim();
+    if (body.Price.HasValue) listing.Price = body.Price.Value;
+    if (!string.IsNullOrWhiteSpace(body.Category)) listing.Category = body.Category.ToLower();
+    if (body.Condition != null) listing.Condition = body.Condition;
+    if (!string.IsNullOrWhiteSpace(body.Status)) listing.Status = body.Status;
+
+    listing.UpdatedAt = DateTime.UtcNow;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { listing.Id });
+})
+.RequireAuthorization();
+
+app.MapPost("/api/listings/{id:guid}/images", async (Guid id, PraxisDbContext db, ClaimsPrincipal user, List<string> imageUrls) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == id && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var maxOrder = await db.ListingImages
+        .Where(i => i.ListingId == id)
+        .OrderByDescending(i => i.DisplayOrder)
+        .Select(i => (int?)i.DisplayOrder)
+        .FirstOrDefaultAsync() ?? -1;
+
+    for (var i = 0; i < imageUrls.Count; i++)
+    {
+        db.ListingImages.Add(new PraxisApi.Models.ListingImage
+        {
+            Id = Guid.NewGuid(),
+            ListingId = id,
+            ImageUrl = imageUrls[i],
+            DisplayOrder = maxOrder + 1 + i,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapPut("/api/listings/{id:guid}/courses", async (Guid id, PraxisDbContext db, ClaimsPrincipal user, List<Guid> courseIds) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == id && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var existing = await db.ListingCourses.Where(lc => lc.ListingId == id).ToListAsync();
+    db.ListingCourses.RemoveRange(existing);
+    await db.SaveChangesAsync();
+
+    foreach (var courseId in courseIds)
+    {
+        db.ListingCourses.Add(new PraxisApi.Models.ListingCourse { ListingId = id, CourseId = courseId });
+        await db.SaveChangesAsync();
+    }
+
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapPut("/api/listings/{id:guid}/semesters", async (Guid id, PraxisDbContext db, ClaimsPrincipal user, List<Guid> semesterIds) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == id && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var existing = await db.ListingSemesters.Where(ls => ls.ListingId == id).ToListAsync();
+    db.ListingSemesters.RemoveRange(existing);
+    await db.SaveChangesAsync();
+
+    foreach (var semesterId in semesterIds)
+    {
+        db.ListingSemesters.Add(new PraxisApi.Models.ListingSemester { ListingId = id, SemesterId = semesterId });
+        await db.SaveChangesAsync();
+    }
+
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapPut("/api/listings/{listingId:guid}/images/reorder", async (Guid listingId, PraxisDbContext db, ClaimsPrincipal user, List<Guid> imageIds) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == listingId && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    for (var i = 0; i < imageIds.Count; i++)
+    {
+        var image = await db.ListingImages.FirstOrDefaultAsync(img => img.Id == imageIds[i] && img.ListingId == listingId);
+        if (image != null)
+        {
+            image.DisplayOrder = i;
+            await db.SaveChangesAsync();
+        }
+    }
+
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapDelete("/api/listings/{listingId:guid}/images/{imageId:guid}", async (Guid listingId, Guid imageId, PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var listing = await db.Listings.FirstOrDefaultAsync(l => l.Id == listingId && l.SellerId == dbUser.Id);
+    if (listing == null)
+        return Results.NotFound();
+
+    var image = await db.ListingImages.FirstOrDefaultAsync(i => i.Id == imageId && i.ListingId == listingId);
+    if (image == null)
+        return Results.NotFound();
+
+    db.ListingImages.Remove(image);
+    await db.SaveChangesAsync();
+
+    return Results.Ok();
+})
+.RequireAuthorization();
 
 // --- Message endpoints ---
 
@@ -435,3 +769,6 @@ app.MapGet("/api/messages/{userId:guid}", async (Guid userId, PraxisDbContext db
 app.Run();
 
 record ProfileUpdateRequest(string? FirstName, string? LastName, string? Username, string? Bio, string? PreferredPaymentMethods, string? ProfileImageUrl);
+record CreateListingRequest(string Title, string? Description, decimal Price, string Category, string? Condition, List<string>? ImageUrls);
+record UpdateListingRequest(string? Title, string? Description, decimal? Price, string? Category, string? Condition, string? Status);
+record FindOrCreateSemester(string Term, int Year, string Name);

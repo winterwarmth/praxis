@@ -18,111 +18,325 @@
     <div class="detail-layout">
       <!-- Image gallery -->
       <div class="gallery">
-        <div class="main-image">
-          @if (selectedImageUrl()) {
-            <img [src]="selectedImageUrl()" [alt]="l.title" />
-          } @else {
-            <div class="no-image">No image</div>
-          }
-        </div>
-        @if (l.images.length > 1) {
-          <div class="thumbnails">
-            @for (img of l.images; track img.id; let i = $index) {
-              <button
-                class="thumb"
-                [class.active]="selectedImageIndex() === i"
-                (click)="selectImage(i)"
+        @if (isEditing()) {
+          <div class="edit-images">
+            @for (img of editImages(); track img.id; let i = $index) {
+              <div
+                class="edit-image-item"
+                draggable="true"
+                [class.dragging]="dragIndex() === i && dragType() === 'existing'"
+                [class.drag-over]="dragOverIndex() === i && dragOverType() === 'existing'"
+                (dragstart)="onDragStart(i, 'existing')"
+                (dragover)="onDragOver($event, i, 'existing')"
+                (drop)="onDrop($event)"
+                (dragend)="onDragEnd()"
               >
-                <img [src]="img.imageUrl" [alt]="l.title + ' image ' + (i + 1)" />
-              </button>
+                <img [src]="img.imageUrl" alt="Listing image" />
+                <button class="remove-img" (click)="removeExistingImage(i)">
+                  <ng-icon name="lucideX" size="14"></ng-icon>
+                </button>
+              </div>
+            }
+            @for (img of newImagePreviews(); track img.url; let i = $index) {
+              <div
+                class="edit-image-item"
+                draggable="true"
+                [class.dragging]="dragIndex() === i && dragType() === 'new'"
+                [class.drag-over]="dragOverIndex() === i && dragOverType() === 'new'"
+                (dragstart)="onDragStart(i, 'new')"
+                (dragover)="onDragOver($event, i, 'new')"
+                (drop)="onDrop($event)"
+                (dragend)="onDragEnd()"
+              >
+                <img [src]="img.url" alt="New image" />
+                <button class="remove-img" (click)="removeNewImage(i)">
+                  <ng-icon name="lucideX" size="14"></ng-icon>
+                </button>
+              </div>
+            }
+            @if (editImages().length + newImagePreviews().length < 5) {
+              <label class="add-image-btn" for="editImageInput">
+                <ng-icon name="lucideCamera" size="20"></ng-icon>
+              </label>
+              <input
+                id="editImageInput"
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                (change)="onEditImagesSelected($event)"
+              />
             }
           </div>
+        } @else {
+          <div class="main-image">
+            @if (selectedImageUrl()) {
+              <img [src]="selectedImageUrl()" [alt]="l.title" />
+            } @else {
+              <div class="no-image">No image</div>
+            }
+          </div>
+          @if (l.images.length > 1) {
+            <div class="thumbnails">
+              @for (img of l.images; track img.id; let i = $index) {
+                <button
+                  class="thumb"
+                  [class.active]="selectedImageIndex() === i"
+                  (click)="selectImage(i)"
+                >
+                  <img [src]="img.imageUrl" [alt]="l.title + ' image ' + (i + 1)" />
+                </button>
+              }
+            </div>
+          }
         }
       </div>
 
       <!-- Info panel -->
       <div class="info-panel">
-        <div class="title-row">
-          <h1>{{ l.title }}</h1>
-          @if (l.status === 'sold') {
-            <span class="status-badge sold">Sold</span>
-          }
-        </div>
-
-        <p class="price">{{ l.price | currency }}</p>
-
-        @if (l.condition) {
-          <div class="meta-tags">
-            <span class="tag condition-tag">{{ l.condition }}</span>
+        @if (isEditing()) {
+          <!-- Edit mode -->
+          <div class="edit-group">
+            <label>Title</label>
+            <input type="text" [(ngModel)]="editForm.title" class="edit-input" />
           </div>
-        }
 
-        <div class="actions">
-          <button class="btn btn-save" [class.saved]="isSaved()" (click)="toggleSave()">
-            <ng-icon name="lucideBookmark" size="16"></ng-icon>
-            {{ isSaved() ? 'Saved' : 'Save' }}
-          </button>
-          @if (l.seller) {
-            <a class="btn btn-message" [routerLink]="['/messages']">
-              <ng-icon name="lucideSend" size="16"></ng-icon>
-              Message Seller
-            </a>
-          }
-        </div>
-
-        @if (l.description) {
-          <div class="section">
-            <h2>Description</h2>
-            <p class="description">{{ l.description }}</p>
+          <div class="edit-group">
+            <label>Price</label>
+            <input type="text" inputmode="decimal" [(ngModel)]="editForm.price" class="edit-input" (keydown)="filterPriceInput($event)" />
           </div>
-        }
 
-        <!-- Seller card -->
-        @if (l.seller; as seller) {
-          <div class="section">
-            <h2>Seller</h2>
-            <a class="seller-card" [routerLink]="['/user', seller.id]">
-              <div class="seller-avatar">
-                @if (seller.profileImageUrl) {
-                  <img [src]="seller.profileImageUrl" [alt]="seller.firstName" />
-                } @else {
-                  <ng-icon name="lucideCircleUserRound"></ng-icon>
+          <div class="edit-row">
+            <div class="edit-group">
+              <label>Category</label>
+              <select [(ngModel)]="editForm.category" class="edit-input">
+                @for (cat of categories; track cat) {
+                  <option [value]="cat">{{ cat }}</option>
+                }
+              </select>
+            </div>
+            @if (editForm.category !== 'services' && editForm.category !== 'food' && editForm.category !== 'rent') {
+              <div class="edit-group">
+                <label>Condition</label>
+                <select [(ngModel)]="editForm.condition" class="edit-input">
+                  @for (cond of conditions; track cond.value) {
+                    <option [value]="cond.value">{{ cond.label }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+
+          <div class="edit-group">
+            <label>Description</label>
+            <textarea [(ngModel)]="editForm.description" class="edit-input edit-textarea" rows="4"></textarea>
+          </div>
+
+          <div class="edit-group">
+            <label>Status</label>
+            <select [(ngModel)]="editForm.status" class="edit-input">
+              <option value="active">Active</option>
+              <option value="sold">Sold</option>
+            </select>
+          </div>
+
+          <div class="edit-group">
+            <label>Related Courses</label>
+            <input
+              type="text"
+              class="edit-input"
+              placeholder="Search courses (e.g. CSC 4350)"
+              [ngModel]="courseSearchQuery()"
+              (ngModelChange)="onCourseSearch($event)"
+            />
+            @if (filteredCourses().length > 0) {
+              <div class="course-dropdown">
+                @for (course of filteredCourses(); track course.id) {
+                  <button
+                    class="course-option"
+                    [class.selected]="isEditCourseSelected(course.id)"
+                    (click)="toggleEditCourse(course)"
+                  >
+                    {{ course.subjectCode }} {{ course.courseNumber }} — {{ course.courseName }}
+                  </button>
                 }
               </div>
-              <div class="seller-info">
-                <span class="seller-name">{{ seller.firstName }} {{ seller.lastName }}</span>
-                <span class="seller-username">
-                  @{{ seller.username }}
-                  <span class="role-badge" [class.faculty]="seller.role === 'faculty'">{{ seller.role }}</span>
-                </span>
-                @if (sellerReviews(); as reviews) {
-                  <span class="seller-rating">
-                    @if (reviews.totalReviews > 0) {
-                      <span class="stars">{{ getStars(reviews.averageRating) }}</span>
-                      {{ reviews.averageRating }} ({{ reviews.totalReviews }})
-                    } @else {
-                      No ratings yet
-                    }
+            }
+            @if (editCourses().length > 0) {
+              <div class="course-tags">
+                @for (course of editCourses(); track course.id) {
+                  <span class="course-tag">
+                    {{ course.subjectCode }} {{ course.courseNumber }}
+                    <button class="course-tag-remove" (click)="removeEditCourse(course.id)">
+                      <ng-icon name="lucideX" size="12"></ng-icon>
+                    </button>
                   </span>
                 }
               </div>
-            </a>
+            }
           </div>
-        }
 
-        <!-- Payment methods -->
-        @if (paymentMethods().length > 0) {
-          <div class="section">
-            <h2>Accepted Payments</h2>
-            <div class="payment-tags">
-              @for (method of paymentMethods(); track method) {
-                <span class="payment-tag">{{ method }}</span>
-              }
+          <div class="edit-group">
+            <label>Applicable Semesters</label>
+            <div class="semester-add-row">
+              <select [(ngModel)]="semesterTerm" class="edit-input semester-input">
+                <option value="">Term</option>
+                <option value="spring">Spring</option>
+                <option value="summer">Summer</option>
+                <option value="fall">Fall</option>
+              </select>
+              <input
+                type="text"
+                inputmode="numeric"
+                [(ngModel)]="semesterYear"
+                class="edit-input semester-input"
+                placeholder="Year"
+                maxlength="4"
+                (keydown)="filterYearInput($event)"
+              />
+              <button class="btn btn-add-semester" (click)="addSemester()">Add</button>
             </div>
+            @if (editSemesterTags().length > 0) {
+              <div class="semester-tags-edit">
+                @for (sem of editSemesterTags(); track sem.id) {
+                  <span
+                    class="semester-tag"
+                    [class.pending-remove]="pendingRemoveSemester() === sem.id"
+                    (click)="clickSemester(sem.id); $event.stopPropagation()"
+                  >
+                    {{ sem.name }}
+                  </span>
+                }
+              </div>
+            } @else {
+              <span class="semester-note">No semesters selected = applicable to all</span>
+            }
           </div>
-        }
 
-        <p class="time-ago">{{ timeAgo() }}</p>
+          <div class="edit-actions">
+            <button class="btn btn-primary" (click)="saveEdits()" [disabled]="isSaving()">
+              {{ isSaving() ? 'Saving...' : 'Save' }}
+            </button>
+            <button class="btn btn-secondary" (click)="cancelEditing()">Cancel</button>
+            <button
+              class="btn btn-delete"
+              [class.confirming]="confirmingDelete()"
+              (click)="deleteListing(); $event.stopPropagation()"
+            >
+              {{ confirmingDelete() ? 'Confirm?' : 'Delete' }}
+            </button>
+          </div>
+        } @else {
+          <!-- View mode -->
+          <h1 class="title">{{ l.title }}</h1>
+
+          <p class="price">
+            {{ l.price | currency }}
+            @if (l.status === 'sold') {
+              <span class="status-badge sold">Sold</span>
+            }
+          </p>
+
+          @if (l.condition) {
+            <div class="meta-tags">
+              <span class="tag condition-tag">{{ l.condition }}</span>
+            </div>
+          }
+
+          <div class="actions">
+            <button class="btn btn-save" [class.saved]="isSaved()" (click)="toggleSave()">
+              <ng-icon name="lucideBookmark" size="16"></ng-icon>
+              {{ isSaved() ? 'Saved' : 'Save' }}
+            </button>
+            @if (l.seller && !isOwner()) {
+              <a class="btn btn-message" [routerLink]="['/messages']">
+                <ng-icon name="lucideSend" size="16"></ng-icon>
+                Message Seller
+              </a>
+            }
+            @if (isOwner()) {
+              <button class="btn btn-edit" (click)="startEditing()">
+                Edit
+              </button>
+            }
+          </div>
+
+          @if (l.description) {
+            <div class="section">
+              <h2>Description</h2>
+              <p class="description">{{ l.description }}</p>
+            </div>
+          }
+
+          <!-- Seller card -->
+          @if (l.seller; as seller) {
+            <div class="section">
+              <h2>Seller</h2>
+              <a class="seller-card" [routerLink]="['/u', seller.username]">
+                <div class="seller-avatar">
+                  @if (seller.profileImageUrl) {
+                    <img [src]="seller.profileImageUrl" [alt]="seller.firstName" />
+                  } @else {
+                    <ng-icon name="lucideCircleUserRound"></ng-icon>
+                  }
+                </div>
+                <div class="seller-info">
+                  <span class="seller-name">{{ seller.firstName }} {{ seller.lastName }}</span>
+                  <span class="seller-username">
+                    @{{ seller.username }}
+                    <span class="role-badge" [class.faculty]="seller.role === 'faculty'">{{ seller.role }}</span>
+                  </span>
+                  @if (sellerReviews(); as reviews) {
+                    <span class="seller-rating">
+                      @if (reviews.totalReviews > 0) {
+                        <span class="stars">{{ getStars(reviews.averageRating) }}</span>
+                        {{ reviews.averageRating }} ({{ reviews.totalReviews }})
+                      } @else {
+                        No ratings yet
+                      }
+                    </span>
+                  }
+                </div>
+              </a>
+            </div>
+          }
+
+          <!-- Payment methods -->
+          @if (paymentMethods().length > 0) {
+            <div class="section">
+              <h2>Accepted Payments</h2>
+              <div class="payment-tags">
+                @for (method of paymentMethods(); track method) {
+                  <span class="payment-tag">{{ method }}</span>
+                }
+              </div>
+            </div>
+          }
+
+          @if (l.courses && l.courses.length > 0) {
+            <div class="section">
+              <h2>Related Courses</h2>
+              <div class="course-tags">
+                @for (course of l.courses; track course.id) {
+                  <span class="course-tag">{{ course.subjectCode }} {{ course.courseNumber }}</span>
+                }
+              </div>
+            </div>
+          }
+
+          @if (l.semesters && l.semesters.length > 0) {
+            <div class="section">
+              <h2>Semesters</h2>
+              <div class="semester-tags">
+                @for (sem of l.semesters; track sem.id) {
+                  <span class="semester-tag">{{ sem.name }}</span>
+                }
+              </div>
+            </div>
+          }
+
+          <p class="time-ago">{{ timeAgo() }}</p>
+        }
       </div>
     </div>
   </div>

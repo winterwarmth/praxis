@@ -12,8 +12,12 @@
       <button class="icon-btn" aria-label="Notifications">
         <ng-icon name="lucideBell"></ng-icon>
       </button>
-      <a routerLink="/profile" class="profile-link" draggable="false" aria-label="Profile">
-        <ng-icon name="lucideCircleUserRound"></ng-icon>
+      <a [routerLink]="['/u', authService.user()?.user_metadata?.['username'] || 'me']" class="profile-link" draggable="false" aria-label="Profile">
+        @if (profileImageUrl()) {
+          <img class="header-avatar" [src]="profileImageUrl()" alt="Profile" />
+        } @else {
+          <ng-icon name="lucideCircleUserRound"></ng-icon>
+        }
         @if (authService.user(); as user) {
           <span class="profile-name">{{ user.user_metadata['first_name'] || 'Profile' }}</span>
         }

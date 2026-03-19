@@ -41,6 +41,13 @@ header {
   }
 }
 
+.header-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .profile-link {
   display: flex;
   align-items: center;

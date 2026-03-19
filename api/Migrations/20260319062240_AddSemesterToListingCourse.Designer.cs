@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PraxisApi.Data;
@@ -11,9 +12,11 @@ using PraxisApi.Data;
 namespace PraxisApi.Migrations
 {
     [DbContext(typeof(PraxisDbContext))]
-    partial class PraxisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260319062240_AddSemesterToListingCourse")]
+    partial class AddSemesterToListingCourse
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -114,9 +117,15 @@ namespace PraxisApi.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("course_id");
 
+                    b.Property<Guid?>("SemesterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("semester_id");
+
                     b.HasKey("ListingId", "CourseId");
 
                     b.HasIndex("CourseId");
+
+                    b.HasIndex("SemesterId");
 
                     b.ToTable("listing_courses");
                 });
@@ -146,23 +155,6 @@ namespace PraxisApi.Migrations
                     b.HasIndex("ListingId");
 
                     b.ToTable("listing_images");
-                });
-
-            modelBuilder.Entity("PraxisApi.Models.ListingSemester", b =>
-                {
-                    b.Property<Guid>("ListingId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("listing_id");
-
-                    b.Property<Guid>("SemesterId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("semester_id");
-
-                    b.HasKey("ListingId", "SemesterId");
-
-                    b.HasIndex("SemesterId");
-
-                    b.ToTable("listing_semesters");
                 });
 
             modelBuilder.Entity("PraxisApi.Models.Message", b =>
@@ -378,9 +370,15 @@ namespace PraxisApi.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("PraxisApi.Models.Semester", "Semester")
+                        .WithMany()
+                        .HasForeignKey("SemesterId");
+
                     b.Navigation("Course");
 
                     b.Navigation("Listing");
+
+                    b.Navigation("Semester");
                 });
 
             modelBuilder.Entity("PraxisApi.Models.ListingImage", b =>
@@ -392,25 +390,6 @@ namespace PraxisApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Listing");
-                });
-
-            modelBuilder.Entity("PraxisApi.Models.ListingSemester", b =>
-                {
-                    b.HasOne("PraxisApi.Models.Listing", "Listing")
-                        .WithMany("ListingSemesters")
-                        .HasForeignKey("ListingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("PraxisApi.Models.Semester", "Semester")
-                        .WithMany()
-                        .HasForeignKey("SemesterId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Listing");
-
-                    b.Navigation("Semester");
                 });
 
             modelBuilder.Entity("PraxisApi.Models.Message", b =>
@@ -487,8 +466,6 @@ namespace PraxisApi.Migrations
                     b.Navigation("Images");
 
                     b.Navigation("ListingCourses");
-
-                    b.Navigation("ListingSemesters");
                 });
 #pragma warning restore 612, 618
         }

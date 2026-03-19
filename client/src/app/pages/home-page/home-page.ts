@@ -19,6 +19,7 @@ export class HomePage implements OnInit {
   private category = signal('All');
   private priceMin = signal<number | null>(null);
   private priceMax = signal<number | null>(null);
+  private courseId = signal<string | null>(null);
 
   ngOnInit(): void {
     this.fetchListings();
@@ -49,8 +50,9 @@ export class HomePage implements OnInit {
     // Not implemented yet — no backend field
   }
 
-  onCourseFilter(course: string): void {
-    // Not implemented yet — no backend field
+  onCourseFilter(courseId: string): void {
+    this.courseId.set(courseId || null);
+    this.fetchListings();
   }
 
   private fetchListings(): void {
@@ -61,6 +63,7 @@ export class HomePage implements OnInit {
         sort: this.sort(),
         minPrice: this.priceMin(),
         maxPrice: this.priceMax(),
+        courseId: this.courseId() || undefined,
       })
       .subscribe((data) => {
         this.listings.set(data);

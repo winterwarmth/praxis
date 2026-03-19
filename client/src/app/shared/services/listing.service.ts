@@ -32,6 +32,18 @@ export interface ListingSeller {
   preferredPaymentMethods: string;
 }
 
+export interface ListingCourse {
+  id: string;
+  subjectCode: string;
+  courseNumber: string;
+  courseName: string;
+}
+
+export interface ListingSemester {
+  id: string;
+  name: string;
+}
+
 export interface ListingDetail {
   id: string;
   sellerId: string;
@@ -45,6 +57,8 @@ export interface ListingDetail {
   updatedAt: string;
   images: ListingImage[];
   seller: ListingSeller | null;
+  courses: ListingCourse[];
+  semesters: ListingSemester[];
 }
 
 export interface ListingFilters {
@@ -55,6 +69,7 @@ export interface ListingFilters {
   maxPrice?: number | null;
   sellerId?: string;
   status?: string;
+  courseId?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -75,11 +90,46 @@ export class ListingService {
       params = params.set('sellerId', filters.sellerId);
     if (filters?.status)
       params = params.set('status', filters.status);
+    if (filters?.courseId)
+      params = params.set('courseId', filters.courseId);
 
     return this.http.get<Listing[]>('/api/listings', { params });
   }
 
   getListing(id: string): Observable<ListingDetail> {
     return this.http.get<ListingDetail>(`/api/listings/${id}`);
+  }
+
+  createListing(data: {
+    title: string;
+    description?: string;
+    price: number;
+    category: string;
+    condition?: string;
+  }): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>('/api/listings', data);
+  }
+
+  addListingImages(listingId: string, imageUrls: string[]): Observable<void> {
+    return this.http.post<void>(`/api/listings/${listingId}/images`, imageUrls);
+  }
+
+  setListingCourses(listingId: string, courseIds: string[]): Observable<void> {
+    return this.http.put<void>(`/api/listings/${listingId}/courses`, courseIds);
+  }
+
+  setListingSemesters(listingId: string, semesterIds: string[]): Observable<void> {
+    return this.http.put<void>(`/api/listings/${listingId}/semesters`, semesterIds);
+  }
+
+  updateListing(id: string, data: {
+    title?: string;
+    description?: string;
+    price?: number;
+    category?: string;
+    condition?: string;
+    status?: string;
+  }): Observable<{ id: string }> {
+    return this.http.put<{ id: string }>(`/api/listings/${id}`, data);
   }
 }
