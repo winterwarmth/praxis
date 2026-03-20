@@ -1,0 +1,43 @@
+<section class="message-thread-page">
+  <header class="thread-header">
+    <a routerLink="/messages" class="back-link">
+      <ng-icon name="lucideArrowLeft" size="20"></ng-icon>
+      Back to messages
+    </a>
+    <h1>{{ otherUserName() || 'Conversation' }}</h1>
+    @if (listingTitle()) {
+      <p class="listing-context">Re: {{ listingTitle() }}</p>
+    }
+  </header>
+
+  @if (loading()) {
+    <p class="loading-state">Loading conversation...</p>
+  } @else {
+    <ul class="message-list">
+      @for (msg of messages(); track msg.id) {
+        <li class="message-bubble" [class.sent]="isFromMe(msg)" [class.received]="!isFromMe(msg)">
+          <p class="message-content">{{ msg.content }}</p>
+          <span class="message-time">{{ msg.createdAt | date:'MMM d, h:mm a' }}</span>
+        </li>
+      }
+    </ul>
+
+    <form class="compose-form" (ngSubmit)="sendMessage()">
+      <textarea
+        [(ngModel)]="newMessage"
+        name="newMessage"
+        placeholder="Type your message..."
+        rows="2"
+        [disabled]="sending()"
+      ></textarea>
+      <button type="submit" class="send-btn" [disabled]="!newMessage.trim() || sending()">
+        @if (sending()) {
+          Sending...
+        } @else {
+          <ng-icon name="lucideSend" size="18"></ng-icon>
+          Send
+        }
+      </button>
+    </form>
+  }
+</section>
