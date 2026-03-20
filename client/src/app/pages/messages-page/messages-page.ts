@@ -11,19 +11,23 @@ import { MessagingService, MessageThread } from '../../shared/services/messaging
 })
 export class MessagesPage {
   private messagingService = inject(MessagingService);
-  
+
   protected threads = signal<MessageThread[]>([]);
 
   constructor() {
-    // This ensures the HTTP request is completely ignored by the Node SSR server 
-    // and only fires once the page loads in the client's browser.
     afterNextRender(() => {
-      const currentUserId = 'a1111111-1111-1111-1111-111111111111'; 
-      
-      this.messagingService.getThreads(currentUserId).subscribe(data => {
-        this.threads.set(data);
+      this.messagingService.getThreads().subscribe({
+        next: (data) => this.threads.set(data),
+        error: () => {},
       });
     });
+  }
+
+  protected getThreadRoute(thread: MessageThread): string[] | null {
+    if (thread.listingId) {
+      return ['/messages', 'thread', thread.otherUserId, thread.listingId];
+    }
+    return null;
   }
 
   protected removeThread(id: string): void {
