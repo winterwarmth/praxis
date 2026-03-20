@@ -7,6 +7,7 @@ import { NgIcon } from '@ng-icons/core';
 
 import { SavedItemsService } from '../../shared/services/saved-items.service';
 import { ListingCourse, ListingDetail, ListingImage, ListingService } from '../../shared/services/listing.service';
+import { MessagingService } from '../../shared/services/messaging.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 
 interface ImagePreview {
@@ -55,6 +56,7 @@ export class ListingDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly savedItems = inject(SavedItemsService);
   private readonly listingService = inject(ListingService);
+  private readonly messagingService = inject(MessagingService);
   private readonly http = inject(HttpClient);
   private readonly supabaseService = inject(SupabaseService);
   private readonly router = inject(Router);
@@ -197,6 +199,21 @@ export class ListingDetailPage implements OnInit {
       imageUrl: l.images[0]?.imageUrl ?? null,
       price: l.price,
       condition: l.condition,
+    });
+  }
+
+  protected readonly contacting = signal(false);
+
+  protected contactSeller(): void {
+    const l = this.listing();
+    if (!l?.seller || this.contacting()) return;
+    this.contacting.set(true);
+    const initialMessage = `Hi, I'm interested in your "${l.title}".`;
+    this.messagingService.sendMessage(l.seller.id, l.id, initialMessage).subscribe({
+      next: () => {
+        this.router.navigate(['/messages', 'thread', l.seller!.id, l.id]);
+      },
+      error: () => this.contacting.set(false),
     });
   }
 

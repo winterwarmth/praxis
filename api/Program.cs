@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -731,8 +732,17 @@ app.MapDelete("/api/listings/{listingId:guid}/images/{imageId:guid}", async (Gui
 
 // --- Message endpoints ---
 
-app.MapGet("/api/messages/{userId:guid}", async (Guid userId, PraxisDbContext db) =>
+app.MapGet("/api/messages", async (PraxisDbContext db, ClaimsPrincipal user) =>
 {
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var userId = dbUser.Id;
     var messages = await db.Messages
         .Include(m => m.Listing)
         .Include(m => m.Sender)
@@ -754,6 +764,8 @@ app.MapGet("/api/messages/{userId:guid}", async (Guid userId, PraxisDbContext db
             return new
             {
                 Id = latest.Id,
+                OtherUserId = g.Key.OtherUserId,
+                ListingId = g.Key.ListingId,
                 OtherUserName = otherUser != null ? $"{otherUser.FirstName} {otherUser.LastName}" : "Unknown User",
                 ItemTitle = latest.Listing?.Title ?? "Deleted Listing",
                 LastMessage = latest.Content,
@@ -766,9 +778,104 @@ app.MapGet("/api/messages/{userId:guid}", async (Guid userId, PraxisDbContext db
 })
 .RequireAuthorization();
 
+app.MapGet("/api/messages/thread", async (PraxisDbContext db, ClaimsPrincipal user, [FromQuery] Guid otherUserId, [FromQuery] Guid listingId) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var otherUser = await db.Users.FindAsync(otherUserId);
+    var listing = await db.Listings.FindAsync(listingId);
+
+    var currentUserId = dbUser.Id;
+    var messages = await db.Messages
+        .Include(m => m.Listing)
+        .Include(m => m.Sender)
+        .Include(m => m.Receiver)
+        .Where(m =>
+            ((m.SenderId == currentUserId && m.ReceiverId == otherUserId) ||
+             (m.SenderId == otherUserId && m.ReceiverId == currentUserId)) &&
+            m.ListingId == listingId)
+        .OrderBy(m => m.CreatedAt)
+        .Select(m => new
+        {
+            m.Id,
+            m.SenderId,
+            m.ReceiverId,
+            m.Content,
+            m.IsRead,
+            m.CreatedAt,
+            SenderName = m.Sender != null ? $"{m.Sender.FirstName} {m.Sender.LastName}" : "Unknown",
+            ListingTitle = m.Listing != null ? m.Listing.Title : null
+        })
+        .ToListAsync();
+
+    return Results.Ok(new
+    {
+        Messages = messages,
+        OtherUserName = otherUser != null ? $"{otherUser.FirstName} {otherUser.LastName}" : "Unknown",
+        ListingTitle = listing?.Title ?? "Deleted Listing"
+    });
+})
+.RequireAuthorization();
+
+app.MapPost("/api/messages", async (PraxisDbContext db, ClaimsPrincipal user, CreateMessageRequest body) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    if (dbUser.Id == body.ReceiverId)
+        return Results.BadRequest("Cannot send a message to yourself.");
+
+    var listing = body.ListingId.HasValue
+        ? await db.Listings.FindAsync(body.ListingId.Value)
+        : null;
+    if (body.ListingId.HasValue && listing == null)
+        return Results.NotFound("Listing not found.");
+
+    var receiverExists = await db.Users.AnyAsync(u => u.Id == body.ReceiverId);
+    if (!receiverExists)
+        return Results.NotFound("Receiver not found.");
+
+    var message = new PraxisApi.Models.Message
+    {
+        Id = Guid.NewGuid(),
+        SenderId = dbUser.Id,
+        ReceiverId = body.ReceiverId,
+        ListingId = body.ListingId,
+        Content = body.Content?.Trim() ?? "",
+        IsRead = false,
+        CreatedAt = DateTime.UtcNow
+    };
+
+    db.Messages.Add(message);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/api/messages/{message.Id}", new
+    {
+        message.Id,
+        message.SenderId,
+        message.ReceiverId,
+        message.ListingId,
+        message.Content,
+        message.CreatedAt
+    });
+})
+.RequireAuthorization();
+
 app.Run();
 
 record ProfileUpdateRequest(string? FirstName, string? LastName, string? Username, string? Bio, string? PreferredPaymentMethods, string? ProfileImageUrl);
 record CreateListingRequest(string Title, string? Description, decimal Price, string Category, string? Condition, List<string>? ImageUrls);
+record CreateMessageRequest(Guid ReceiverId, Guid? ListingId, string Content);
 record UpdateListingRequest(string? Title, string? Description, decimal? Price, string? Category, string? Condition, string? Status);
 record FindOrCreateSemester(string Term, int Year, string Name);

@@ -14,6 +14,14 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Client
   },
   {
+    path: 'messages',
+    renderMode: RenderMode.Client
+  },
+  {
+    path: 'messages/thread/:otherUserId/:listingId',
+    renderMode: RenderMode.Client
+  },
+  {
     path: 'login',
     renderMode: RenderMode.Client
   },

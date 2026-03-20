@@ -249,10 +249,14 @@
               {{ isSaved() ? 'Saved' : 'Save' }}
             </button>
             @if (l.seller && !isOwner()) {
-              <a class="btn btn-message" [routerLink]="['/messages']">
+              <button
+                class="btn btn-message"
+                (click)="contactSeller()"
+                [disabled]="contacting()"
+              >
                 <ng-icon name="lucideSend" size="16"></ng-icon>
-                Message Seller
-              </a>
+                {{ contacting() ? 'Sending...' : 'Message Seller' }}
+              </button>
             }
             @if (isOwner()) {
               <button class="btn btn-edit" (click)="startEditing()">
