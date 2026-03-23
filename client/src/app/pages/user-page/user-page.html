@@ -125,7 +125,7 @@
             </span>
           }
         </h2>
-        @if (!isOwner() && !isLeavingReview()) {
+        @if (!isOwner() && !isLeavingReview() && !hasReviewed()) {
           <button class="btn btn-secondary" (click)="isLeavingReview.set(true)">Leave a Review</button>
         }
       </div>

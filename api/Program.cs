@@ -390,6 +390,7 @@ app.MapGet("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbConte
         .Select(r => new
         {
             r.Id,
+            ReviewerId = r.ReviewerId,
             r.Rating,
             r.Comment,
             r.CreatedAt,

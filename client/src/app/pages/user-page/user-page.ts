@@ -33,6 +33,7 @@ interface CourseInfo {
 
 interface ReviewInfo {
   id: string;
+  reviewerId: string;
   rating: number;
   comment: string | null;
   createdAt: string;
@@ -96,6 +97,11 @@ export class UserPage implements OnInit, OnDestroy {
     const currentUserId = this.currentUserId();
     if (!profile || !currentUserId) return false;
     return profile.id === currentUserId;
+  });
+  readonly hasReviewed = computed(() => {
+    const currentId = this.currentUserId();
+    if (!currentId) return false;
+    return this.reviewsData().reviews.some(r => r.reviewerId === currentId);
   });
 
   constructor() {
