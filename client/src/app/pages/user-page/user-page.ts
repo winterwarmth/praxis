@@ -7,6 +7,9 @@ import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { ListingCard } from '../../shared/ui/listing-card/listing-card';
 import { Listing, ListingService } from '../../shared/services/listing.service';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { DatePipe } from '@angular/common';
+
+
 
 interface UserProfile {
   id: string;
@@ -30,6 +33,7 @@ interface CourseInfo {
 
 interface ReviewInfo {
   id: string;
+  reviewerId: string;
   rating: number;
   comment: string | null;
   createdAt: string;
@@ -47,7 +51,7 @@ const PAYMENT_OPTIONS = ['cash', 'cashapp', 'paypal', 'venmo', 'zelle'] as const
 
 @Component({
   selector: 'app-user-page',
-  imports: [NgIcon, ListingCard, FormsModule],
+  imports: [NgIcon, ListingCard, FormsModule, DatePipe],
   templateUrl: './user-page.html',
   styleUrl: './user-page.scss',
 })
@@ -56,6 +60,7 @@ export class UserPage implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private listingService = inject(ListingService);
   private supabaseService = inject(SupabaseService);
+  
 
   readonly profile = signal<UserProfile | null>(null);
   readonly currentUserId = signal<string | null>(null);
@@ -76,6 +81,11 @@ export class UserPage implements OnInit, OnDestroy {
   readonly nextUsernameChangeDate = signal('');
   readonly paymentOptions = PAYMENT_OPTIONS;
 
+  readonly isLeavingReview = signal(false);
+  readonly newReviewRating = signal(5);
+  readonly newReviewComment = signal('');
+  readonly isSubmittingReview = signal(false);
+
   editForm = { firstName: '', lastName: '', username: '', bio: '', preferredPaymentMethods: '' };
   editPayments: Record<string, boolean> = {};
   editCourseIds: Set<string> = new Set();
@@ -87,6 +97,11 @@ export class UserPage implements OnInit, OnDestroy {
     const currentUserId = this.currentUserId();
     if (!profile || !currentUserId) return false;
     return profile.id === currentUserId;
+  });
+  readonly hasReviewed = computed(() => {
+    const currentId = this.currentUserId();
+    if (!currentId) return false;
+    return this.reviewsData().reviews.some(r => r.reviewerId === currentId);
   });
 
   constructor() {
@@ -337,6 +352,38 @@ export class UserPage implements OnInit, OnDestroy {
         this.errorMessage.set(msg);
         this.isSaving.set(false);
       },
+    });
+  }
+  setRating(rating: number): void {
+    this.newReviewRating.set(rating);
+  }
+
+  submitReview(): void {
+    const user = this.profile();
+    if (!user) return;
+
+    this.isSubmittingReview.set(true);
+    
+    const body = {
+      rating: this.newReviewRating(),
+      comment: this.newReviewComment()
+    };
+
+    this.http.post(`/api/users/${user.id}/reviews`, body).subscribe({
+      next: () => {
+        // Refresh the reviews list to show the new one
+        this.http.get<ReviewsResponse>(`/api/users/${user.id}/reviews`)
+          .subscribe((data) => this.reviewsData.set(data));
+        
+        this.isLeavingReview.set(false);
+        this.isSubmittingReview.set(false);
+        this.newReviewComment.set('');
+        this.newReviewRating.set(5);
+      },
+      error: (err) => {
+        this.errorMessage.set(typeof err.error === 'string' ? err.error : 'Failed to submit review.');
+        this.isSubmittingReview.set(false);
+      }
     });
   }
 }
