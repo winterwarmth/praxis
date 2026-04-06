@@ -886,13 +886,17 @@ app.MapPost("/api/messages", async (PraxisDbContext db, ClaimsPrincipal user, Cr
     if (!receiverExists)
         return Results.NotFound("Receiver not found.");
 
+    var content = body.Content?.Trim() ?? "";
+    if (string.IsNullOrWhiteSpace(content))
+        return Results.BadRequest("Message content cannot be empty.");
+
     var message = new PraxisApi.Models.Message
     {
         Id = Guid.NewGuid(),
         SenderId = dbUser.Id,
         ReceiverId = body.ReceiverId,
         ListingId = body.ListingId,
-        Content = body.Content?.Trim() ?? "",
+        Content = content,
         IsRead = false,
         CreatedAt = DateTime.UtcNow
     };
