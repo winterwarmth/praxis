@@ -115,28 +115,69 @@
 
     <!-- Payment Methods -->
     <div class="profile-section">
-      <h2>{{ isOwner() ? 'My Preferred Payments' : 'Preferred Payments' }}</h2>
-      @if (isEditing()) {
-        <div class="payment-options">
-          @for (method of paymentOptions; track method) {
-            <div class="checkbox-label" (click)="togglePayment(method)">
-              <input type="checkbox" [checked]="editPayments[method]" (click)="$event.stopPropagation(); togglePayment(method)" />
-              {{ formatPaymentLabel(method) }}
+      <div class="reviews-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>
+          {{ isOwner() ? 'My Ratings' : 'Ratings' }}
+          @if (reviewsData().totalReviews > 0) {
+            <span class="rating-summary">
+              <span class="stars">{{ getStars(reviewsData().averageRating) }}</span>
+              {{ reviewsData().averageRating }} ({{ reviewsData().totalReviews }})
+            </span>
+          }
+        </h2>
+        @if (!isOwner() && !isLeavingReview() && !hasReviewed()) {
+          <button class="btn btn-secondary" (click)="isLeavingReview.set(true)">Leave a Review</button>
+        }
+      </div>
+
+      @if (isLeavingReview()) {
+        <div class="review-form" style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+          <h3>Write a Review</h3>
+          <div class="star-selector" style="font-size: 1.5rem; cursor: pointer; color: #ffc107; margin-bottom: 1rem;">
+            @for (star of [1, 2, 3, 4, 5]; track star) {
+              <span (click)="setRating(star)">
+                {{ star <= newReviewRating() ? '★' : '☆' }}
+              </span>
+            }
+          </div>
+          <textarea 
+            [(ngModel)]="newReviewComment" 
+            placeholder="Describe your experience with this user..."
+            class="edit-textarea"
+            rows="3"
+            style="width: 100%; margin-bottom: 1rem;"
+          ></textarea>
+          <div style="display: flex; gap: 1rem;">
+            <button class="btn btn-primary" (click)="submitReview()" [disabled]="isSubmittingReview()">
+              {{ isSubmittingReview() ? 'Submitting...' : 'Submit Review' }}
+            </button>
+            <button class="btn btn-secondary" (click)="isLeavingReview.set(false)">Cancel</button>
+          </div>
+        </div>
+      }
+
+      @if (reviewsData().reviews.length > 0) {
+        <div class="reviews-list">
+          @for (review of reviewsData().reviews; track review.id) {
+            <div class="review-item">
+              <div class="review-header">
+                <span class="stars">{{ getStars(review.rating) }}</span>
+                <span class="review-author">@{{ review.reviewerUsername }}</span>
+                <span class="review-date" style="font-size: 0.8rem; color: #888; margin-left: auto;">
+                  {{ review.createdAt | date:'MMM d, yyyy' }}
+                </span>
+              </div>
+              @if (review.comment) {
+                <p class="review-comment">{{ review.comment }}</p>
+              }
             </div>
           }
         </div>
       } @else {
-        @if (user.preferredPaymentMethods) {
-          <div class="payment-tags">
-            @for (method of user.preferredPaymentMethods.split(','); track method) {
-              <span class="payment-tag">{{ formatPaymentLabel(method) }}</span>
-            }
-          </div>
-        } @else {
-          <p class="empty-text">No payment methods set</p>
-        }
+        <p class="empty-text">No reviews yet</p>
       }
     </div>
+    
 
     <!-- Courses (owner only) -->
     @if (isOwner()) {
@@ -187,15 +228,47 @@
 
     <!-- Ratings -->
     <div class="profile-section">
-      <h2>
-        {{ isOwner() ? 'My Ratings' : 'Ratings' }}
-        @if (reviewsData().totalReviews > 0) {
-          <span class="rating-summary">
-            <span class="stars">{{ getStars(reviewsData().averageRating) }}</span>
-            {{ reviewsData().averageRating }} ({{ reviewsData().totalReviews }})
-          </span>
+      <div class="reviews-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>
+          {{ isOwner() ? 'My Ratings' : 'Ratings' }}
+          @if (reviewsData().totalReviews > 0) {
+            <span class="rating-summary">
+              <span class="stars">{{ getStars(reviewsData().averageRating) }}</span>
+              {{ reviewsData().averageRating }} ({{ reviewsData().totalReviews }})
+            </span>
+          }
+        </h2>
+        @if (!isOwner() && !isLeavingReview() && !hasReviewed()) {
+          <button class="btn btn-secondary" (click)="isLeavingReview.set(true)">Leave a Review</button>
         }
-      </h2>
+      </div>
+
+      @if (isLeavingReview()) {
+        <div class="review-form" style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+          <h3>Write a Review</h3>
+          <div class="star-selector" style="font-size: 1.5rem; cursor: pointer; color: #ffc107; margin-bottom: 1rem;">
+            @for (star of [1, 2, 3, 4, 5]; track star) {
+              <span (click)="setRating(star)">
+                {{ star <= newReviewRating() ? '★' : '☆' }}
+              </span>
+            }
+          </div>
+          <textarea 
+            [(ngModel)]="newReviewComment" 
+            placeholder="Describe your experience with this user..."
+            class="edit-textarea"
+            rows="3"
+            style="width: 100%; margin-bottom: 1rem;"
+          ></textarea>
+          <div style="display: flex; gap: 1rem;">
+            <button class="btn btn-primary" (click)="submitReview()" [disabled]="isSubmittingReview()">
+              {{ isSubmittingReview() ? 'Submitting...' : 'Submit Review' }}
+            </button>
+            <button class="btn btn-secondary" (click)="isLeavingReview.set(false)">Cancel</button>
+          </div>
+        </div>
+      }
+
       @if (reviewsData().reviews.length > 0) {
         <div class="reviews-list">
           @for (review of reviewsData().reviews; track review.id) {
@@ -203,6 +276,9 @@
               <div class="review-header">
                 <span class="stars">{{ getStars(review.rating) }}</span>
                 <span class="review-author">@{{ review.reviewerUsername }}</span>
+                <span class="review-date" style="font-size: 0.8rem; color: #888; margin-left: auto;">
+                  {{ review.createdAt | date:'MMM d, yyyy' }}
+                </span>
               </div>
               @if (review.comment) {
                 <p class="review-comment">{{ review.comment }}</p>

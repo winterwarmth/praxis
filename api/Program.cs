@@ -390,6 +390,7 @@ app.MapGet("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbConte
         .Select(r => new
         {
             r.Id,
+            ReviewerId = r.ReviewerId,
             r.Rating,
             r.Comment,
             r.CreatedAt,
@@ -402,6 +403,45 @@ app.MapGet("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbConte
 
     return Results.Ok(new { reviews, averageRating = Math.Round(avgRating, 1), totalReviews = reviews.Count });
 });
+app.MapPost("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbContext db, ClaimsPrincipal user, CreateReviewRequest body) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    if (dbUser.Id == userId)
+        return Results.BadRequest("You cannot review yourself.");
+
+    var revieweeExists = await db.Users.AnyAsync(u => u.Id == userId);
+    if (!revieweeExists)
+        return Results.NotFound("User to review not found.");
+
+    if (body.Rating < 1 || body.Rating > 5)
+        return Results.BadRequest("Rating must be between 1 and 5.");
+    var alreadyReviewed = await db.Reviews.AnyAsync(r => r.ReviewerId == dbUser.Id && r.RevieweeId == userId);
+    if (alreadyReviewed)
+        return Results.BadRequest("You have already reviewed this user.");
+
+    var review = new PraxisApi.Models.Review
+    {
+        Id = Guid.NewGuid(),
+        ReviewerId = dbUser.Id,
+        RevieweeId = userId,
+        Rating = body.Rating,
+        Comment = body.Comment?.Trim(),
+        CreatedAt = DateTime.UtcNow
+    };
+
+    db.Reviews.Add(review);
+    await db.SaveChangesAsync();
+
+    return Results.Ok();
+})
+.RequireAuthorization();
 
 // --- Listing endpoints ---
 
@@ -846,13 +886,17 @@ app.MapPost("/api/messages", async (PraxisDbContext db, ClaimsPrincipal user, Cr
     if (!receiverExists)
         return Results.NotFound("Receiver not found.");
 
+    var content = body.Content?.Trim() ?? "";
+    if (string.IsNullOrWhiteSpace(content))
+        return Results.BadRequest("Message content cannot be empty.");
+
     var message = new PraxisApi.Models.Message
     {
         Id = Guid.NewGuid(),
         SenderId = dbUser.Id,
         ReceiverId = body.ReceiverId,
         ListingId = body.ListingId,
-        Content = body.Content?.Trim() ?? "",
+        Content = content,
         IsRead = false,
         CreatedAt = DateTime.UtcNow
     };
@@ -879,3 +923,4 @@ record CreateListingRequest(string Title, string? Description, decimal Price, st
 record CreateMessageRequest(Guid ReceiverId, Guid? ListingId, string Content);
 record UpdateListingRequest(string? Title, string? Description, decimal? Price, string? Category, string? Condition, string? Status);
 record FindOrCreateSemester(string Term, int Year, string Name);
+record CreateReviewRequest(int Rating, string? Comment);
