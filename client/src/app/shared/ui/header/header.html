@@ -6,12 +6,41 @@
   @if (authService.isAuthenticated()) {
     <app-navbar></app-navbar>
     <div class="header-actions">
-      <a routerLink="/messages" class="icon-btn" draggable="false" aria-label="Messages">
+      <a routerLink="/messages" class="icon-btn badge-btn" draggable="false" aria-label="Messages">
         <ng-icon name="lucideMessageCircle"></ng-icon>
+        @if (unreadMessageCount() > 0) {
+          <span class="badge">{{ unreadMessageCount() }}</span>
+        }
       </a>
-      <button class="icon-btn" aria-label="Notifications">
-        <ng-icon name="lucideBell"></ng-icon>
-      </button>
+      
+      <div class="notifications-wrapper">
+        <button class="icon-btn badge-btn" aria-label="Notifications" (click)="toggleNotifications()">
+          <ng-icon name="lucideBell"></ng-icon>
+          @if (unreadNotificationCount() > 0) {
+            <span class="badge">{{ unreadNotificationCount() }}</span>
+          }
+        </button>
+
+        @if (showNotifications()) {
+          <div class="notifications-dropdown">
+            <h3>Notifications</h3>
+            @if (notifications().length === 0) {
+              <p class="empty-notif">No new notifications</p>
+            } @else {
+              <ul class="notif-list">
+                @for (notif of notifications(); track notif.id) {
+                  <li>
+                    <a [routerLink]="notif.link" (click)="showNotifications.set(false)">
+                      {{ notif.message }}
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+      </div>
+
       <a [routerLink]="['/u', authService.user()?.user_metadata?.['username'] || 'me']" class="profile-link" draggable="false" aria-label="Profile">
         @if (profileImageUrl()) {
           <img class="header-avatar" [src]="profileImageUrl()" alt="Profile" />
