@@ -7,6 +7,7 @@ export interface SavedItem {
   imageUrl?: string | null;
   price?: number;
   condition?: string | null;
+  status?: string;
 }
 
 const STORAGE_KEY = 'praxis_saved_items';
