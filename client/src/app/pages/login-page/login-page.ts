@@ -17,6 +17,12 @@ export class LoginPage {
   protected errorMessage = signal('');
   protected isSubmitting = signal(false);
 
+  protected isResettingPassword = signal(false);
+  protected resetEmail = '';
+  protected resetMessage = signal('');
+  protected resetError = signal('');
+  protected isSendingReset = signal(false);
+
   constructor(
     private authService: AuthService,
     private http: HttpClient,
@@ -50,6 +56,33 @@ export class LoginPage {
       this.errorMessage.set(error.message);
     } else {
       this.router.navigate(['/home']);
+    }
+  }
+
+  protected toggleResetPassword(): void {
+    this.isResettingPassword.update(v => !v);
+    this.resetEmail = '';
+    this.resetMessage.set('');
+    this.resetError.set('');
+  }
+
+  protected async onSendResetEmail(): Promise<void> {
+    this.resetError.set('');
+    this.resetMessage.set('');
+
+    if (!this.resetEmail.includes('@')) {
+      this.resetError.set('Please enter a valid email.');
+      return;
+    }
+
+    this.isSendingReset.set(true);
+    const { error } = await this.authService.requestPasswordReset(this.resetEmail);
+    this.isSendingReset.set(false);
+
+    if (error) {
+      this.resetError.set(error.message);
+    } else {
+      this.resetMessage.set('Check your email for a reset link.');
     }
   }
 }

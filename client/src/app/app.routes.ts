@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { HomePage } from './pages/home-page/home-page';
 import { LoginPage } from './pages/login-page/login-page';
 import { ApplyPage } from './pages/apply-page/apply-page';
+import { ResetPasswordPage } from './pages/reset-password-page/reset-password-page';
 
 import { SavedPage } from './pages/saved-page/saved-page';
 import { ForYouPage } from './pages/for-you-page/for-you-page';
@@ -18,6 +19,7 @@ export const routes: Routes = [
   { path: 'home', component: HomePage, canActivate: [authGuard] },
   { path: 'login', component: LoginPage },
   { path: 'apply', component: ApplyPage },
+  { path: 'reset-password', component: ResetPasswordPage },
   { path: 'saved', component: SavedPage, canActivate: [authGuard] },
   { path: 'for-you', component: ForYouPage, canActivate: [authGuard] },
   { path: 'u/:username', component: UserPage, canActivate: [authGuard] },

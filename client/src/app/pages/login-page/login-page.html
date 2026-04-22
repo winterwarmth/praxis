@@ -9,36 +9,67 @@
         <textPath href="#curve" startOffset="50%" text-anchor="middle">Log in</textPath>
       </text>
     </svg>
-    <form (ngSubmit)="onSubmit()">
-      <div class="form-group">
-        <label for="emailOrUsername">Email or Username</label>
-        <input
-          id="emailOrUsername"
-          type="text"
-          placeholder="you@example.edu"
-          [(ngModel)]="emailOrUsername"
-          name="emailOrUsername"
-          required
-        />
-      </div>
-      <div class="form-group">
-        <label for="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          placeholder="Enter your password"
-          [(ngModel)]="password"
-          name="password"
-          required
-        />
-      </div>
-      @if (errorMessage()) {
-        <p class="error-message">{{ errorMessage() }}</p>
-      }
-      <button type="submit" class="login-btn" [disabled]="isSubmitting()">
-        {{ isSubmitting() ? 'Logging in...' : 'Log in' }}
-      </button>
-    </form>
-    <p class="signup-link">Don't have an account? <a routerLink="/apply">Apply</a></p>
+    @if (!isResettingPassword()) {
+      <form (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="emailOrUsername">Email or Username</label>
+          <input
+            id="emailOrUsername"
+            type="text"
+            placeholder="you@example.edu"
+            [(ngModel)]="emailOrUsername"
+            name="emailOrUsername"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            placeholder="Enter your password"
+            [(ngModel)]="password"
+            name="password"
+            required
+          />
+        </div>
+        @if (errorMessage()) {
+          <p class="error-message">{{ errorMessage() }}</p>
+        }
+        <button type="submit" class="login-btn" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Logging in...' : 'Log in' }}
+        </button>
+        <p class="forgot-password-link">
+          <a href="javascript:void(0)" (click)="toggleResetPassword()">Forgot password?</a>
+        </p>
+      </form>
+      <p class="signup-link">Don't have an account? <a routerLink="/apply">Apply</a></p>
+    } @else {
+      <form (ngSubmit)="onSendResetEmail()">
+        <div class="form-group">
+          <label for="resetEmail">Email</label>
+          <input
+            id="resetEmail"
+            type="email"
+            placeholder="you@example.edu"
+            [(ngModel)]="resetEmail"
+            name="resetEmail"
+            required
+          />
+        </div>
+        @if (resetError()) {
+          <p class="error-message">{{ resetError() }}</p>
+        }
+        @if (resetMessage()) {
+          <p class="success-message">{{ resetMessage() }}</p>
+        }
+        <button type="submit" class="login-btn" [disabled]="isSendingReset()">
+          {{ isSendingReset() ? 'Sending...' : 'Send reset link' }}
+        </button>
+        <p class="forgot-password-link">
+          <a href="javascript:void(0)" (click)="toggleResetPassword()">Back to login</a>
+        </p>
+      </form>
+    }
   </div>
 </div>

@@ -39,10 +39,14 @@ export class AuthService {
       if (_event === 'SIGNED_IN' && session) {
         this.syncUser();
 
-        if (this.initialHash.includes('access_token')) {
+        if (this.initialHash.includes('access_token') && !this.initialHash.includes('type=recovery')) {
           this.initialHash = '';
           this.router.navigate(['/home']);
         }
+      }
+
+      if (_event === 'PASSWORD_RECOVERY') {
+        this.router.navigate(['/reset-password']);
       }
     });
 
@@ -108,6 +112,26 @@ export class AuthService {
     const { data, error } = await this.supabase.auth.signInWithPassword({
       email,
       password,
+    });
+
+    return { data, error };
+  }
+
+  async requestPasswordReset(email: string) {
+    const redirectTo = typeof window !== 'undefined'
+      ? `${window.location.origin}/reset-password`
+      : undefined;
+
+    const { data, error } = await this.supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
+
+    return { data, error };
+  }
+
+  async updatePassword(newPassword: string) {
+    const { data, error } = await this.supabase.auth.updateUser({
+      password: newPassword,
     });
 
     return { data, error };
