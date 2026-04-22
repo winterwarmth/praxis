@@ -1,12 +1,14 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { inject, Injectable, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 
 export interface MessageThread {
   id: string;
   otherUserId: string;
   listingId: string | null;
   otherUserName: string;
+  otherUserAvatarUrl: string | null;
+  otherUserRole: string;
   itemTitle: string;
   lastMessage: string;
   isUnread: boolean;
@@ -27,6 +29,9 @@ export interface ThreadMessage {
 export interface ThreadResponse {
   messages: ThreadMessage[];
   otherUserName: string;
+  otherUserHandle: string | null;
+  otherUserAvatarUrl: string | null;
+  otherUserRole: string;
   listingTitle: string;
 }
 
@@ -36,8 +41,12 @@ export interface ThreadResponse {
 export class MessagingService {
   private http = inject(HttpClient);
 
+  readonly unreadCount = signal(0);
+
   getThreads(): Observable<MessageThread[]> {
-    return this.http.get<MessageThread[]>('/api/messages');
+    return this.http.get<MessageThread[]>('/api/messages').pipe(
+      tap(threads => this.unreadCount.set(threads.filter(t => t.isUnread).length))
+    );
   }
 
   getThreadMessages(otherUserId: string, listingId: string): Observable<ThreadResponse> {
@@ -53,5 +62,27 @@ export class MessagingService {
       listingId,
       content,
     });
+  }
+
+  markThreadRead(otherUserId: string, listingId: string): Observable<{ updated: number }> {
+    return this.http.post<{ updated: number }>('/api/messages/thread/mark-read', {
+      otherUserId,
+      listingId,
+    }).pipe(
+      tap(res => {
+        if (res.updated > 0) {
+          this.unreadCount.update(n => Math.max(0, n - 1));
+        }
+      })
+    );
+  }
+
+  markThreadUnread(otherUserId: string, listingId: string): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>('/api/messages/thread/mark-unread', {
+      otherUserId,
+      listingId,
+    }).pipe(
+      tap(() => this.unreadCount.update(n => n + 1))
+    );
   }
 }

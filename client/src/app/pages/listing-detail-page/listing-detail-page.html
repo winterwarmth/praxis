@@ -1,5 +1,7 @@
 @if (loading()) {
-  <div class="loading">Loading...</div>
+  <div class="loading">
+    <app-spinner label="Loading listing" />
+  </div>
 } @else if (error()) {
   <div class="error-state">
     <p>{{ error() }}</p>

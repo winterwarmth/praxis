@@ -3,7 +3,9 @@
   <p class="subtitle">Listings related to your courses</p>
 
   @if (loading()) {
-    <p class="loading">Loading...</p>
+    <div class="loading">
+      <app-spinner label="Loading recommendations" />
+    </div>
   } @else if (listings().length === 0) {
     @if (!hasCourses()) {
       <div class="empty-state">

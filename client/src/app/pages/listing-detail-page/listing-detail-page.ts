@@ -9,6 +9,7 @@ import { SavedItemsService } from '../../shared/services/saved-items.service';
 import { ListingCourse, ListingDetail, ListingImage, ListingService } from '../../shared/services/listing.service';
 import { MessagingService } from '../../shared/services/messaging.service';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { Spinner } from '../../shared/ui/spinner/spinner';
 
 interface ImagePreview {
   file: File;
@@ -48,7 +49,7 @@ const CONDITIONS = [
 
 @Component({
   selector: 'app-listing-detail-page',
-  imports: [RouterLink, CurrencyPipe, FormsModule, NgIcon],
+  imports: [RouterLink, CurrencyPipe, FormsModule, NgIcon, Spinner],
   templateUrl: './listing-detail-page.html',
   styleUrl: './listing-detail-page.scss',
 })

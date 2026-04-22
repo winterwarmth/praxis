@@ -7,6 +7,17 @@
   --text-color: #e0e0e0;
   --nav-active-bg: var(--text-color);
   --nav-active-text: var(--bg-color);
+
+  --bg-primary: #1c2230;
+  --bg-secondary: #232a3b;
+  --bg-unread: #1a2d5a;
+  --border-color: #2a3244;
+  --border-unread: #4a7cff;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a8b8;
+  --text-tertiary: #6b7080;
+  --color-accent: #4a7cff;
+  --color-danger: #ff6b6b;
 }
 
 body {
@@ -14,6 +25,11 @@ body {
   color: var(--text-color);
   font-family: 'Inter', sans-serif;
   line-height: 1.5;
+}
+
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 code, pre, .mono {

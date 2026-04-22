@@ -2,17 +2,19 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { SearchBar } from '../../shared/ui/search-bar/search-bar';
 import { ListingCard } from '../../shared/ui/listing-card/listing-card';
 import { ListingFilter } from './listing-filter/listing-filter';
+import { Spinner } from '../../shared/ui/spinner/spinner';
 import { Listing, ListingService } from '../../shared/services/listing.service';
 
 @Component({
   selector: 'app-home-page',
-  imports: [SearchBar, ListingCard, ListingFilter],
+  imports: [SearchBar, ListingCard, ListingFilter, Spinner],
   templateUrl: './home-page.html',
   styleUrl: './home-page.scss',
 })
 export class HomePage implements OnInit {
   private listingService = inject(ListingService);
   readonly listings = signal<Listing[]>([]);
+  readonly loading = signal(true);
 
   private search = signal('');
   private sort = signal('price-low');
@@ -56,6 +58,7 @@ export class HomePage implements OnInit {
   }
 
   private fetchListings(): void {
+    this.loading.set(true);
     this.listingService
       .getListings({
         search: this.search(),
@@ -65,8 +68,12 @@ export class HomePage implements OnInit {
         maxPrice: this.priceMax(),
         courseId: this.courseId() || undefined,
       })
-      .subscribe((data) => {
-        this.listings.set(data);
+      .subscribe({
+        next: (data) => {
+          this.listings.set(data);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
       });
   }
 }

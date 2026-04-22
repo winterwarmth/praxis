@@ -1,13 +1,15 @@
 .loading {
-  text-align: center;
-  padding: 4rem 1.5rem;
-  color: #a0a8b8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40vh;
 }
 
 .profile-container {
   max-width: 900px;
   margin: 0 auto;
   padding: 2rem 1rem;
+  animation: page-fade-in 100ms ease-out both;
 }
 
 .profile-header {

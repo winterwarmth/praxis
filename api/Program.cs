@@ -807,6 +807,8 @@ app.MapGet("/api/messages", async (PraxisDbContext db, ClaimsPrincipal user) =>
                 OtherUserId = g.Key.OtherUserId,
                 ListingId = g.Key.ListingId,
                 OtherUserName = otherUser != null ? $"{otherUser.FirstName} {otherUser.LastName}" : "Unknown User",
+                OtherUserAvatarUrl = otherUser?.ProfileImageUrl,
+                OtherUserRole = otherUser?.Role ?? "student",
                 ItemTitle = latest.Listing?.Title ?? "Deleted Listing",
                 LastMessage = latest.Content,
                 IsUnread = !latest.IsRead && latest.ReceiverId == userId,
@@ -858,8 +860,66 @@ app.MapGet("/api/messages/thread", async (PraxisDbContext db, ClaimsPrincipal us
     {
         Messages = messages,
         OtherUserName = otherUser != null ? $"{otherUser.FirstName} {otherUser.LastName}" : "Unknown",
+        OtherUserHandle = otherUser?.Username,
+        OtherUserAvatarUrl = otherUser?.ProfileImageUrl,
+        OtherUserRole = otherUser?.Role ?? "student",
         ListingTitle = listing?.Title ?? "Deleted Listing"
     });
+})
+.RequireAuthorization();
+
+app.MapPost("/api/messages/thread/mark-read", async (PraxisDbContext db, ClaimsPrincipal user, MarkThreadReadRequest body) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var userId = dbUser.Id;
+    var unreadMessages = await db.Messages
+        .Where(m =>
+            m.ReceiverId == userId &&
+            m.SenderId == body.OtherUserId &&
+            m.ListingId == body.ListingId &&
+            !m.IsRead)
+        .ToListAsync();
+
+    foreach (var msg in unreadMessages)
+        msg.IsRead = true;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { updated = unreadMessages.Count });
+})
+.RequireAuthorization();
+
+app.MapPost("/api/messages/thread/mark-unread", async (PraxisDbContext db, ClaimsPrincipal user, MarkThreadReadRequest body) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var userId = dbUser.Id;
+    var latest = await db.Messages
+        .Where(m =>
+            m.ReceiverId == userId &&
+            m.SenderId == body.OtherUserId &&
+            m.ListingId == body.ListingId)
+        .OrderByDescending(m => m.CreatedAt)
+        .FirstOrDefaultAsync();
+
+    if (latest == null)
+        return Results.NotFound();
+
+    latest.IsRead = false;
+    await db.SaveChangesAsync();
+    return Results.Ok(new { id = latest.Id });
 })
 .RequireAuthorization();
 
@@ -921,6 +981,7 @@ app.Run();
 record ProfileUpdateRequest(string? FirstName, string? LastName, string? Username, string? Bio, string? PreferredPaymentMethods, string? ProfileImageUrl);
 record CreateListingRequest(string Title, string? Description, decimal Price, string Category, string? Condition, List<string>? ImageUrls);
 record CreateMessageRequest(Guid ReceiverId, Guid? ListingId, string Content);
+record MarkThreadReadRequest(Guid OtherUserId, Guid ListingId);
 record UpdateListingRequest(string? Title, string? Description, decimal? Price, string? Category, string? Condition, string? Status);
 record FindOrCreateSemester(string Term, int Year, string Name);
 record CreateReviewRequest(int Rating, string? Comment);

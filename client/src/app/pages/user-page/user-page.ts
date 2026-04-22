@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { ListingCard } from '../../shared/ui/listing-card/listing-card';
+import { Spinner } from '../../shared/ui/spinner/spinner';
 import { Listing, ListingService } from '../../shared/services/listing.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { DatePipe } from '@angular/common';
@@ -51,7 +52,7 @@ const PAYMENT_OPTIONS = ['cash', 'cashapp', 'paypal', 'venmo', 'zelle'] as const
 
 @Component({
   selector: 'app-user-page',
-  imports: [NgIcon, ListingCard, FormsModule, DatePipe],
+  imports: [NgIcon, ListingCard, FormsModule, DatePipe, Spinner],
   templateUrl: './user-page.html',
   styleUrl: './user-page.scss',
 })
