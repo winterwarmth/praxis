@@ -20,6 +20,44 @@
     color: #a0a8b8;
     margin-bottom: 0.35rem;
   }
+
+}
+
+.form-group-compact {
+  flex: 0 0 120px;
+}
+
+.form-group-condition {
+  flex: 0 0 160px;
+}
+
+.form-row {
+  align-items: flex-end;
+
+  .suggest-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-bottom: 1.25rem;
+    padding: 0.5rem;
+    background-color: rgba(253, 230, 138, 0.15);
+    color: #fde68a;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background-color: rgba(253, 230, 138, 0.25);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
 }
 
 .form-row {

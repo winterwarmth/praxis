@@ -190,7 +190,7 @@
 
     <!-- Ratings -->
     <div class="profile-section">
-      <div class="reviews-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="reviews-header">
         <h2>
           {{ isOwner() ? 'My Ratings' : 'Ratings' }}
           @if (reviewsData().totalReviews > 0) {
@@ -206,23 +206,22 @@
       </div>
 
       @if (isLeavingReview()) {
-        <div class="review-form" style="background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+        <div class="review-form">
           <h3>Write a Review</h3>
-          <div class="star-selector" style="font-size: 1.5rem; cursor: pointer; color: #ffc107; margin-bottom: 1rem;">
+          <div class="star-selector">
             @for (star of [1, 2, 3, 4, 5]; track star) {
               <span (click)="setRating(star)">
                 {{ star <= newReviewRating() ? '★' : '☆' }}
               </span>
             }
           </div>
-          <textarea 
-            [(ngModel)]="newReviewComment" 
+          <textarea
+            [(ngModel)]="newReviewComment"
             placeholder="Describe your experience with this user..."
             class="edit-textarea"
             rows="3"
-            style="width: 100%; margin-bottom: 1rem;"
           ></textarea>
-          <div style="display: flex; gap: 1rem;">
+          <div class="review-actions">
             <button class="btn btn-primary" (click)="submitReview()" [disabled]="isSubmittingReview()">
               {{ isSubmittingReview() ? 'Submitting...' : 'Submit Review' }}
             </button>
@@ -237,10 +236,25 @@
             <div class="review-item">
               <div class="review-header">
                 <span class="stars">{{ getStars(review.rating) }}</span>
-                <span class="review-author">@{{ review.reviewerUsername }}</span>
-                <span class="review-date" style="font-size: 0.8rem; color: #888; margin-left: auto;">
+                <a class="review-author" [routerLink]="['/u', review.reviewerUsername]">@{{ review.reviewerUsername }}</a>
+                <span class="review-date">
                   {{ review.createdAt | date:'MMM d, yyyy' }}
                 </span>
+                @if (review.reviewerId === currentUserId()) {
+                  <button
+                    type="button"
+                    class="review-delete-btn"
+                    [class.confirming]="confirmingDeleteReviewId() === review.id"
+                    [attr.aria-label]="confirmingDeleteReviewId() === review.id ? 'Confirm delete' : 'Delete review'"
+                    (click)="onDeleteReviewClick(review.id)"
+                  >
+                    @if (confirmingDeleteReviewId() === review.id) {
+                      <ng-icon name="lucideFlame"></ng-icon>
+                    } @else {
+                      <ng-icon name="lucideTrash2"></ng-icon>
+                    }
+                  </button>
+                }
               </div>
               @if (review.comment) {
                 <p class="review-comment">{{ review.comment }}</p>
@@ -256,20 +270,18 @@
     <div class="profile-listings">
       <div class="listings-header">
         <h2>{{ isOwner() ? 'My Listings' : 'Listings' }}</h2>
-        @if (isOwner()) {
-          <div class="listing-toggle">
-            <button
-              class="toggle-btn"
-              [class.active]="listingFilter() === 'active'"
-              (click)="setListingFilter('active')"
-            >Active</button>
-            <button
-              class="toggle-btn"
-              [class.active]="listingFilter() === 'sold'"
-              (click)="setListingFilter('sold')"
-            >Sold</button>
-          </div>
-        }
+        <div class="listing-toggle">
+          <button
+            class="toggle-btn"
+            [class.active]="listingFilter() === 'active'"
+            (click)="setListingFilter('active')"
+          >Active</button>
+          <button
+            class="toggle-btn"
+            [class.active]="listingFilter() === 'sold'"
+            (click)="setListingFilter('sold')"
+          >Sold</button>
+        </div>
       </div>
       @if (listings().length > 0) {
         <div class="listings-grid">
@@ -284,10 +296,54 @@
             />
           }
         </div>
+      } @else if (listingFilter() === 'sold') {
+        <p class="empty-text">No sold items yet</p>
       } @else {
-        <p class="empty-text">No listings yet</p>
+        <p class="empty-text">No active listings yet</p>
       }
     </div>
+
+    @if (isOwner()) {
+      <div class="profile-section">
+        <div class="reviews-header">
+          <h2>My Reviews</h2>
+        </div>
+        @if (authoredReviews().length > 0) {
+          <div class="reviews-list">
+            @for (review of authoredReviews(); track review.id) {
+              <div class="review-item">
+                <div class="review-header">
+                  <span class="stars">{{ getStars(review.rating) }}</span>
+                  <span class="review-for">for</span>
+                  <a class="review-author" [routerLink]="['/u', review.revieweeUsername]">@{{ review.revieweeUsername }}</a>
+                  <span class="review-date">
+                    {{ review.createdAt | date:'MMM d, yyyy' }}
+                  </span>
+                  <button
+                    type="button"
+                    class="review-delete-btn"
+                    [class.confirming]="confirmingDeleteReviewId() === review.id"
+                    [attr.aria-label]="confirmingDeleteReviewId() === review.id ? 'Confirm delete' : 'Delete review'"
+                    (click)="onDeleteReviewClick(review.id)"
+                  >
+                    @if (confirmingDeleteReviewId() === review.id) {
+                      <ng-icon name="lucideFlame"></ng-icon>
+                    } @else {
+                      <ng-icon name="lucideTrash2"></ng-icon>
+                    }
+                  </button>
+                </div>
+                @if (review.comment) {
+                  <p class="review-comment">{{ review.comment }}</p>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="empty-text">You haven't left any reviews yet</p>
+        }
+      </div>
+    }
   </div>
 } @else {
   <div class="loading">User not found.</div>

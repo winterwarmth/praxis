@@ -1,5 +1,5 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { Component, inject, signal, OnInit, OnDestroy, computed, HostListener } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
@@ -48,11 +48,25 @@ interface ReviewsResponse {
   totalReviews: number;
 }
 
+interface AuthoredReview {
+  id: string;
+  revieweeId: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  revieweeName: string;
+  revieweeUsername: string;
+}
+
+interface AuthoredReviewsResponse {
+  reviews: AuthoredReview[];
+}
+
 const PAYMENT_OPTIONS = ['cash', 'cashapp', 'paypal', 'venmo', 'zelle'] as const;
 
 @Component({
   selector: 'app-user-page',
-  imports: [NgIcon, ListingCard, FormsModule, DatePipe, Spinner],
+  imports: [NgIcon, ListingCard, FormsModule, DatePipe, Spinner, RouterLink],
   templateUrl: './user-page.html',
   styleUrl: './user-page.scss',
 })
@@ -73,6 +87,7 @@ export class UserPage implements OnInit, OnDestroy {
   readonly filteredCourses = signal<CourseInfo[]>([]);
   courseSearchQuery = '';
   readonly reviewsData = signal<ReviewsResponse>({ reviews: [], averageRating: 0, totalReviews: 0 });
+  readonly authoredReviews = signal<AuthoredReview[]>([]);
   readonly isEditing = signal(false);
   readonly isSaving = signal(false);
   readonly isUploadingAvatar = signal(false);
@@ -86,6 +101,8 @@ export class UserPage implements OnInit, OnDestroy {
   readonly newReviewRating = signal(5);
   readonly newReviewComment = signal('');
   readonly isSubmittingReview = signal(false);
+  readonly confirmingDeleteReviewId = signal<string | null>(null);
+  private reviewDeleteTimeout: ReturnType<typeof setTimeout> | null = null;
 
   editForm = { firstName: '', lastName: '', username: '', bio: '', preferredPaymentMethods: '' };
   editPayments: Record<string, boolean> = {};
@@ -149,6 +166,8 @@ export class UserPage implements OnInit, OnDestroy {
             if (me.id === user.id) {
               this.http.get<CourseInfo[]>('/api/auth/courses')
                 .subscribe((courses) => this.courses.set(courses));
+              this.http.get<AuthoredReviewsResponse>(`/api/users/${user.id}/reviews-authored`)
+                .subscribe((data) => this.authoredReviews.set(data.reviews));
             }
           },
           error: () => {},
@@ -386,5 +405,60 @@ export class UserPage implements OnInit, OnDestroy {
         this.isSubmittingReview.set(false);
       }
     });
+  }
+
+  onDeleteReviewClick(reviewId: string): void {
+    if (this.confirmingDeleteReviewId() === reviewId) {
+      this.clearReviewDeleteTimeout();
+      this.confirmingDeleteReviewId.set(null);
+      this.deleteReview(reviewId);
+      return;
+    }
+
+    this.clearReviewDeleteTimeout();
+    this.confirmingDeleteReviewId.set(reviewId);
+    this.reviewDeleteTimeout = setTimeout(() => {
+      this.confirmingDeleteReviewId.set(null);
+      this.reviewDeleteTimeout = null;
+    }, 3000);
+  }
+
+  private clearReviewDeleteTimeout(): void {
+    if (this.reviewDeleteTimeout) {
+      clearTimeout(this.reviewDeleteTimeout);
+      this.reviewDeleteTimeout = null;
+    }
+  }
+
+  private deleteReview(reviewId: string): void {
+    const user = this.profile();
+    if (!user) return;
+
+    const review = this.authoredReviews().find(r => r.id === reviewId);
+    const revieweeId = review?.revieweeId ?? user.id;
+
+    this.http.delete(`/api/users/${revieweeId}/reviews/${reviewId}`).subscribe({
+      next: () => {
+        this.http.get<ReviewsResponse>(`/api/users/${user.id}/reviews`)
+          .subscribe((data) => this.reviewsData.set(data));
+        if (this.isOwner()) {
+          this.http.get<AuthoredReviewsResponse>(`/api/users/${user.id}/reviews-authored`)
+            .subscribe((data) => this.authoredReviews.set(data.reviews));
+        }
+      },
+      error: (err) => {
+        this.errorMessage.set(typeof err.error === 'string' ? err.error : 'Failed to delete review.');
+      }
+    });
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.confirmingDeleteReviewId()) return;
+    const target = event.target as HTMLElement;
+    if (!target.closest('.review-delete-btn')) {
+      this.clearReviewDeleteTimeout();
+      this.confirmingDeleteReviewId.set(null);
+    }
   }
 }

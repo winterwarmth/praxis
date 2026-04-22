@@ -43,6 +43,8 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -403,6 +405,50 @@ app.MapGet("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbConte
 
     return Results.Ok(new { reviews, averageRating = Math.Round(avgRating, 1), totalReviews = reviews.Count });
 });
+app.MapGet("/api/users/{userId:guid}/reviews-authored", async (Guid userId, PraxisDbContext db) =>
+{
+    var reviews = await db.Reviews
+        .Where(r => r.ReviewerId == userId)
+        .Include(r => r.Reviewee)
+        .OrderByDescending(r => r.CreatedAt)
+        .Select(r => new
+        {
+            r.Id,
+            RevieweeId = r.RevieweeId,
+            r.Rating,
+            r.Comment,
+            r.CreatedAt,
+            RevieweeName = r.Reviewee != null ? $"{r.Reviewee.FirstName} {r.Reviewee.LastName}" : "Unknown",
+            RevieweeUsername = r.Reviewee != null ? r.Reviewee.Username : "unknown",
+        })
+        .ToListAsync();
+
+    return Results.Ok(new { reviews });
+});
+
+app.MapDelete("/api/users/{userId:guid}/reviews/{reviewId:guid}", async (Guid userId, Guid reviewId, PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId))
+        return Results.Unauthorized();
+
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    if (dbUser == null)
+        return Results.NotFound();
+
+    var review = await db.Reviews.FirstOrDefaultAsync(r => r.Id == reviewId && r.RevieweeId == userId);
+    if (review == null)
+        return Results.NotFound();
+
+    if (review.ReviewerId != dbUser.Id)
+        return Results.Forbid();
+
+    db.Reviews.Remove(review);
+    await db.SaveChangesAsync();
+    return Results.Ok();
+})
+.RequireAuthorization();
+
 app.MapPost("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbContext db, ClaimsPrincipal user, CreateReviewRequest body) =>
 {
     var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
@@ -617,6 +663,40 @@ app.MapPut("/api/listings/{id:guid}", async (Guid id, PraxisDbContext db, Claims
     await db.SaveChangesAsync();
 
     return Results.Ok(new { listing.Id });
+})
+.RequireAuthorization();
+
+app.MapPost("/api/listings/classify", async (IHttpClientFactory httpFactory, ClassifyRequest body) =>
+{
+    var categories = new[] { "clothing", "electronics", "food", "furniture", "rent", "textbooks", "tickets", "services", "other" };
+    var prompt = $"Classify this marketplace listing into exactly one of these categories: {string.Join(", ", categories)}.\n\nTitle: {body.Title}\nDescription: {body.Description}\n\nReply with only the category name, lowercase, no punctuation.";
+
+    var http = httpFactory.CreateClient();
+    http.Timeout = TimeSpan.FromSeconds(30);
+
+    try
+    {
+        var request = new
+        {
+            model = "local-model",
+            messages = new[] { new { role = "user", content = prompt } },
+            temperature = 0.0,
+            max_tokens = 20
+        };
+
+        var res = await http.PostAsJsonAsync("http://127.0.0.1:1234/v1/chat/completions", request);
+        if (!res.IsSuccessStatusCode)
+            return Results.Problem("Classifier unavailable.", statusCode: 503);
+
+        var result = await res.Content.ReadFromJsonAsync<JsonElement>();
+        var raw = result.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString()?.Trim().ToLowerInvariant() ?? "";
+        var matched = categories.FirstOrDefault(c => raw.Contains(c)) ?? "other";
+        return Results.Ok(new { category = matched });
+    }
+    catch
+    {
+        return Results.Problem("Classifier unavailable.", statusCode: 503);
+    }
 })
 .RequireAuthorization();
 
@@ -985,3 +1065,4 @@ record MarkThreadReadRequest(Guid OtherUserId, Guid ListingId);
 record UpdateListingRequest(string? Title, string? Description, decimal? Price, string? Category, string? Condition, string? Status);
 record FindOrCreateSemester(string Term, int Year, string Name);
 record CreateReviewRequest(int Rating, string? Comment);
+record ClassifyRequest(string Title, string? Description);

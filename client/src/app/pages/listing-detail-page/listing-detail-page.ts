@@ -10,6 +10,7 @@ import { ListingCourse, ListingDetail, ListingImage, ListingService } from '../.
 import { MessagingService } from '../../shared/services/messaging.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { Spinner } from '../../shared/ui/spinner/spinner';
+import { CONDITIONS, formatCondition } from '../../shared/constants/conditions';
 
 interface ImagePreview {
   file: File;
@@ -38,14 +39,7 @@ const CATEGORIES = [
   'textbooks', 'tickets', 'services', 'other',
 ] as const;
 
-const CONDITIONS = [
-  { value: '', label: 'None' },
-  { value: 'new', label: 'New' },
-  { value: 'like_new', label: 'Like New' },
-  { value: 'good', label: 'Good' },
-  { value: 'fair', label: 'Fair' },
-  { value: 'poor', label: 'Poor' },
-] as const;
+const EDIT_CONDITIONS = [{ value: '', label: 'None' }, ...CONDITIONS] as const;
 
 @Component({
   selector: 'app-listing-detail-page',
@@ -97,7 +91,8 @@ export class ListingDetailPage implements OnInit {
   protected readonly dragOverType = signal<'existing' | 'new' | null>(null);
 
   protected readonly categories = CATEGORIES;
-  protected readonly conditions = CONDITIONS;
+  protected readonly conditions = EDIT_CONDITIONS;
+  protected readonly formatCondition = formatCondition;
 
   protected readonly isOwner = computed(() => {
     const l = this.listing();

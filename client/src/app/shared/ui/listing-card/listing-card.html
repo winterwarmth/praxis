@@ -10,7 +10,7 @@
     <h3 class="card-title">{{ title() }}</h3>
     <span class="card-price">{{ price() | currency }}</span>
     @if (condition()) {
-      <span class="card-condition">{{ condition() }}</span>
+      <span class="card-condition">{{ conditionLabel() }}</span>
     }
     @if (sellerName()) {
       <span class="card-seller">{{ sellerName() }}</span>
