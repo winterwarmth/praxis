@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ListingCard } from '../../shared/ui/listing-card/listing-card';
+import { Spinner } from '../../shared/ui/spinner/spinner';
 
 interface ForYouListing {
   id: string;
@@ -15,7 +16,7 @@ interface ForYouListing {
 
 @Component({
   selector: 'app-for-you-page',
-  imports: [ListingCard, RouterLink],
+  imports: [ListingCard, RouterLink, Spinner],
   templateUrl: './for-you-page.html',
   styleUrl: './for-you-page.scss',
 })

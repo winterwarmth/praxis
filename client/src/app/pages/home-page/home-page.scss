@@ -17,4 +17,12 @@ app-search-bar {
   grid-template-columns: repeat(auto-fill, 220px);
   grid-auto-rows: min-content;
   gap: 1.25rem;
+  animation: page-fade-in 100ms ease-out both;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40vh;
 }

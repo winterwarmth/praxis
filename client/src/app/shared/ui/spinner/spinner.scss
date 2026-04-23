@@ -1,0 +1,15 @@
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: var(--spinner-size, 2.5rem);
+  height: var(--spinner-size, 2.5rem);
+  border: var(--spinner-border-width, 3px) solid var(--spinner-track-color, var(--border-color));
+  border-top-color: var(--spinner-accent-color, var(--color-accent));
+  border-radius: 50%;
+  animation: spinner-rotate 800ms linear infinite;
+}

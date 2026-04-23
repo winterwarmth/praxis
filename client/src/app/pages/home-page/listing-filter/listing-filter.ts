@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, output, signal } from '@angular/core';
+import { Component, effect, inject, input, OnInit, output, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
 interface CourseOption {
@@ -16,9 +16,31 @@ interface CourseOption {
 })
 export class ListingFilter implements OnInit {
   private http = inject(HttpClient);
+  readonly initialPayments = input<string[]>([]);
+  private hasAppliedInitial = false;
+
+  constructor() {
+    effect(() => {
+      const initial = this.initialPayments();
+      if (!this.hasAppliedInitial && initial.length > 0) {
+        this.selectedPayments.set([...initial]);
+        this.hasAppliedInitial = true;
+      }
+    });
+  }
   readonly sortOptions = [
     { value: 'price-low', label: 'Price: Low to High' },
-    { value: 'price-high', label: 'Price: High to Low' }
+    { value: 'price-high', label: 'Price: High to Low' },
+    { value: 'condition', label: 'Condition: Best First' },
+    { value: 'free', label: 'Free' },
+  ];
+
+  readonly conditionOptions = [
+    { value: '', label: 'Any' },
+    { value: 'fair', label: 'Fair or better' },
+    { value: 'good', label: 'Good or better' },
+    { value: 'like_new', label: 'Like New or better' },
+    { value: 'new', label: 'New only' },
   ];
 
   readonly categories = [
@@ -34,13 +56,21 @@ export class ListingFilter implements OnInit {
     'Other'
   ];
 
-  readonly paymentMethods = ['Cash', 'Cash App', 'PayPal', 'Venmo', 'Zelle'];
+  readonly paymentMethods = [
+    { value: 'cash', label: 'Cash' },
+    { value: 'cashapp', label: 'Cash App' },
+    { value: 'paypal', label: 'PayPal' },
+    { value: 'venmo', label: 'Venmo' },
+    { value: 'zelle', label: 'Zelle' },
+  ];
 
   readonly sortBy = signal('price-low');
   readonly selected = signal('All');
   readonly priceMin = signal<number | null>(null);
   readonly priceMax = signal<number | null>(null);
   readonly selectedPayments = signal<string[]>([]);
+  readonly minCondition = signal<string>('');
+  readonly freeOnly = signal(false);
   readonly courseQuery = signal('');
   readonly allCourses = signal<CourseOption[]>([]);
   readonly filteredCourses = signal<CourseOption[]>([]);
@@ -50,10 +80,18 @@ export class ListingFilter implements OnInit {
   readonly priceChange = output<{ min: number | null; max: number | null }>();
   readonly paymentChange = output<string[]>();
   readonly courseChange = output<string>();
+  readonly conditionChange = output<string>();
+  readonly freeOnlyChange = output<boolean>();
 
   onSelect(category: string): void {
     this.selected.set(category);
     this.select.emit(category);
+  }
+
+  onConditionChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.minCondition.set(value);
+    this.conditionChange.emit(value);
   }
 
   onTogglePayment(method: string): void {
@@ -81,6 +119,11 @@ export class ListingFilter implements OnInit {
   onSortChange(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     this.sortBy.set(value);
+    const isFree = value === 'free';
+    if (this.freeOnly() !== isFree) {
+      this.freeOnly.set(isFree);
+      this.freeOnlyChange.emit(isFree);
+    }
     this.sortChange.emit(value);
   }
 

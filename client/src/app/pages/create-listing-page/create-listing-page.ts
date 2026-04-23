@@ -6,6 +6,8 @@ import { NgIcon } from '@ng-icons/core';
 
 import { ListingCourse, ListingService } from '../../shared/services/listing.service';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { CONDITIONS } from '../../shared/constants/conditions';
+import { Spinner } from '../../shared/ui/spinner/spinner';
 
 const CATEGORIES = [
   'Clothing',
@@ -19,14 +21,6 @@ const CATEGORIES = [
   'Other',
 ] as const;
 
-const CONDITIONS = [
-  { value: 'new', label: 'New' },
-  { value: 'like_new', label: 'Like New' },
-  { value: 'good', label: 'Good' },
-  { value: 'fair', label: 'Fair' },
-  { value: 'poor', label: 'Poor' },
-] as const;
-
 interface ImagePreview {
   file: File;
   url: string;
@@ -34,7 +28,7 @@ interface ImagePreview {
 
 @Component({
   selector: 'app-create-listing-page',
-  imports: [FormsModule, NgIcon],
+  imports: [FormsModule, NgIcon, Spinner],
   templateUrl: './create-listing-page.html',
   styleUrl: './create-listing-page.scss',
 })
@@ -56,6 +50,7 @@ export class CreateListingPage implements OnInit {
   readonly images = signal<ImagePreview[]>([]);
   readonly submitting = signal(false);
   readonly error = signal('');
+  readonly suggestingCategory = signal(false);
 
   // Courses
   readonly selectedCourses = signal<ListingCourse[]>([]);
@@ -162,6 +157,27 @@ export class CreateListingPage implements OnInit {
   removeSemester(id: string): void {
     this.selectedSemesterTags.set(this.selectedSemesterTags().filter((s) => s.id !== id));
     this.pendingRemoveSemester.set(null);
+  }
+
+  suggestCategory(): void {
+    if (!this.title.trim()) {
+      this.error.set('Enter a title before auto-suggesting.');
+      return;
+    }
+    this.suggestingCategory.set(true);
+    this.http.post<{ category: string }>('/api/listings/classify', {
+      title: this.title,
+      description: this.description,
+    }).subscribe({
+      next: (res) => {
+        this.category = res.category;
+        this.suggestingCategory.set(false);
+      },
+      error: () => {
+        this.error.set('Auto-suggest unavailable. Is your local model running?');
+        this.suggestingCategory.set(false);
+      },
+    });
   }
 
   filterPriceInput(event: KeyboardEvent): void {

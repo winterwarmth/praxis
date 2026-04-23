@@ -1,6 +1,7 @@
 import { CurrencyPipe } from '@angular/common';
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { formatCondition } from '../../constants/conditions';
 
 @Component({
   selector: 'app-listing-card',
@@ -16,4 +17,7 @@ export class ListingCard {
   readonly imageUrl = input<string | null>(null);
   readonly condition = input<string | null>(null);
   readonly sellerName = input<string | null>(null);
+  readonly sellerIsBanned = input<boolean>(false);
+
+  readonly conditionLabel = computed(() => formatCondition(this.condition()));
 }

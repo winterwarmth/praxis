@@ -4,10 +4,11 @@ import { NgIcon } from '@ng-icons/core';
 import { SavedItemsService } from '../../shared/services/saved-items.service';
 import { ListingCard } from '../../shared/ui/listing-card/listing-card';
 import { ListingService } from '../../shared/services/listing.service';
+import { Spinner } from '../../shared/ui/spinner/spinner';
 
 @Component({
   selector: 'app-saved-page',
-  imports: [ListingCard, NgIcon],
+  imports: [ListingCard, NgIcon, Spinner],
   templateUrl: './saved-page.html',
   styleUrl: './saved-page.scss',
 })
@@ -17,6 +18,8 @@ export class SavedPage implements OnInit {
 
   protected readonly items = computed(() => this.savedItems.items());
   protected readonly soldIds = signal<Set<string>>(new Set());
+  protected readonly bannedSellerIds = signal<Set<string>>(new Set());
+  protected readonly loading = signal(true);
 
   ngOnInit(): void {
     this.loadStatuses();
@@ -24,29 +27,49 @@ export class SavedPage implements OnInit {
 
   private loadStatuses(): void {
     const ids = this.items().map((i) => i.id);
-    if (ids.length === 0) return;
+    if (ids.length === 0) {
+      this.loading.set(false);
+      return;
+    }
+
+    this.loading.set(true);
+    let pending = ids.length;
+    const sold = new Set<string>();
+    const banned = new Set<string>();
+
+    const done = () => {
+      pending -= 1;
+      if (pending === 0) {
+        this.soldIds.set(sold);
+        this.bannedSellerIds.set(banned);
+        this.loading.set(false);
+      }
+    };
 
     for (const id of ids) {
       this.listingService.getListing(id).subscribe({
         next: (listing) => {
-          if (listing.status === 'sold') {
-            this.soldIds.update((set) => { const s = new Set(set); s.add(id); return s; });
-          }
-          // Refresh saved data with latest from API
+          if (listing.status === 'sold') sold.add(id);
+          if (listing.seller?.isBanned) banned.add(id);
           this.savedItems.update(id, {
             title: listing.title,
             imageUrl: listing.images[0]?.imageUrl ?? null,
             price: listing.price,
             condition: listing.condition,
           });
+          done();
         },
-        error: () => {},
+        error: () => done(),
       });
     }
   }
 
   protected isSold(id: string): boolean {
     return this.soldIds().has(id);
+  }
+
+  protected isBannedSeller(id: string): boolean {
+    return this.bannedSellerIds().has(id);
   }
   protected readonly confirmingClear = signal(false);
 

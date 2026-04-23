@@ -1,19 +1,21 @@
-import { Component, inject, signal, OnInit, OnDestroy, computed } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { Component, inject, signal, OnInit, OnDestroy, computed, HostListener } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { ListingCard } from '../../shared/ui/listing-card/listing-card';
+import { Spinner } from '../../shared/ui/spinner/spinner';
 import { Listing, ListingService } from '../../shared/services/listing.service';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { AuthService } from '../../core/services/auth.service';
 import { DatePipe } from '@angular/common';
 
 
 
 interface UserProfile {
   id: string;
-  email: string;
+  email: string | null;
   username: string;
   firstName: string;
   lastName: string;
@@ -22,6 +24,11 @@ interface UserProfile {
   bio?: string;
   usernameChangedAt?: string | null;
   preferredPaymentMethods?: string;
+  isBanned?: boolean;
+  showCourses?: boolean;
+  showEmail?: boolean;
+  autoPaymentFilter?: boolean;
+  courses?: CourseInfo[];
 }
 
 interface CourseInfo {
@@ -39,6 +46,7 @@ interface ReviewInfo {
   createdAt: string;
   reviewerName: string;
   reviewerUsername: string;
+  reviewerIsBanned: boolean;
 }
 
 interface ReviewsResponse {
@@ -47,11 +55,26 @@ interface ReviewsResponse {
   totalReviews: number;
 }
 
+interface AuthoredReview {
+  id: string;
+  revieweeId: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  revieweeName: string;
+  revieweeUsername: string;
+  revieweeIsBanned: boolean;
+}
+
+interface AuthoredReviewsResponse {
+  reviews: AuthoredReview[];
+}
+
 const PAYMENT_OPTIONS = ['cash', 'cashapp', 'paypal', 'venmo', 'zelle'] as const;
 
 @Component({
   selector: 'app-user-page',
-  imports: [NgIcon, ListingCard, FormsModule, DatePipe],
+  imports: [NgIcon, ListingCard, FormsModule, DatePipe, Spinner, RouterLink],
   templateUrl: './user-page.html',
   styleUrl: './user-page.scss',
 })
@@ -60,6 +83,7 @@ export class UserPage implements OnInit, OnDestroy {
   private http = inject(HttpClient);
   private listingService = inject(ListingService);
   private supabaseService = inject(SupabaseService);
+  protected authService = inject(AuthService);
   
 
   readonly profile = signal<UserProfile | null>(null);
@@ -72,6 +96,7 @@ export class UserPage implements OnInit, OnDestroy {
   readonly filteredCourses = signal<CourseInfo[]>([]);
   courseSearchQuery = '';
   readonly reviewsData = signal<ReviewsResponse>({ reviews: [], averageRating: 0, totalReviews: 0 });
+  readonly authoredReviews = signal<AuthoredReview[]>([]);
   readonly isEditing = signal(false);
   readonly isSaving = signal(false);
   readonly isUploadingAvatar = signal(false);
@@ -85,18 +110,25 @@ export class UserPage implements OnInit, OnDestroy {
   readonly newReviewRating = signal(5);
   readonly newReviewComment = signal('');
   readonly isSubmittingReview = signal(false);
+  readonly confirmingDeleteReviewId = signal<string | null>(null);
+  private reviewDeleteTimeout: ReturnType<typeof setTimeout> | null = null;
+  readonly banning = signal(false);
+  readonly previewMode = signal(false);
 
-  editForm = { firstName: '', lastName: '', username: '', bio: '', preferredPaymentMethods: '' };
+  editForm = { firstName: '', lastName: '', username: '', bio: '', preferredPaymentMethods: '', showCourses: false, showEmail: false, autoPaymentFilter: false };
   editPayments: Record<string, boolean> = {};
   editCourseIds: Set<string> = new Set();
   private originalUsername = '';
   private usernameCheck$ = new Subject<string>();
 
-  readonly isOwner = computed(() => {
+  readonly trueIsOwner = computed(() => {
     const profile = this.profile();
     const currentUserId = this.currentUserId();
     if (!profile || !currentUserId) return false;
     return profile.id === currentUserId;
+  });
+  readonly isOwner = computed(() => {
+    return this.trueIsOwner() && !this.previewMode();
   });
   readonly hasReviewed = computed(() => {
     const currentId = this.currentUserId();
@@ -131,12 +163,18 @@ export class UserPage implements OnInit, OnDestroy {
 
   private loadUser(username: string): void {
     this.loading.set(true);
+    this.profile.set(null);
+    this.listings.set([]);
+    this.reviewsData.set({ reviews: [], averageRating: 0, totalReviews: 0 });
+    this.authoredReviews.set([]);
+    this.courses.set([]);
     this.http.get<UserProfile>(`/api/users/by-username/${encodeURIComponent(username)}`).subscribe({
       next: (user) => {
         this.profile.set(user);
         this.loading.set(false);
         this.checkUsernameChangeEligibility(user);
         this.fetchListings(user.id);
+        if (user.courses) this.courses.set(user.courses);
 
         this.http.get<ReviewsResponse>(`/api/users/${user.id}/reviews`)
           .subscribe((data) => this.reviewsData.set(data));
@@ -148,6 +186,8 @@ export class UserPage implements OnInit, OnDestroy {
             if (me.id === user.id) {
               this.http.get<CourseInfo[]>('/api/auth/courses')
                 .subscribe((courses) => this.courses.set(courses));
+              this.http.get<AuthoredReviewsResponse>(`/api/users/${user.id}/reviews-authored`)
+                .subscribe((data) => this.authoredReviews.set(data.reviews));
             }
           },
           error: () => {},
@@ -194,6 +234,10 @@ export class UserPage implements OnInit, OnDestroy {
     this.usernameCheck$.next(this.editForm.username);
   }
 
+  togglePreview(): void {
+    this.previewMode.update(v => !v);
+  }
+
   startEditing(): void {
     const user = this.profile();
     if (!user) return;
@@ -203,6 +247,9 @@ export class UserPage implements OnInit, OnDestroy {
       username: user.username,
       bio: user.bio || '',
       preferredPaymentMethods: user.preferredPaymentMethods || '',
+      showCourses: !!user.showCourses,
+      showEmail: !!user.showEmail,
+      autoPaymentFilter: !!user.autoPaymentFilter,
     };
     this.originalUsername = user.username;
     this.usernameStatus.set('same');
@@ -385,5 +432,89 @@ export class UserPage implements OnInit, OnDestroy {
         this.isSubmittingReview.set(false);
       }
     });
+  }
+
+  onDeleteReviewClick(reviewId: string): void {
+    if (this.confirmingDeleteReviewId() === reviewId) {
+      this.clearReviewDeleteTimeout();
+      this.confirmingDeleteReviewId.set(null);
+      this.deleteReview(reviewId);
+      return;
+    }
+
+    this.clearReviewDeleteTimeout();
+    this.confirmingDeleteReviewId.set(reviewId);
+    this.reviewDeleteTimeout = setTimeout(() => {
+      this.confirmingDeleteReviewId.set(null);
+      this.reviewDeleteTimeout = null;
+    }, 3000);
+  }
+
+  private clearReviewDeleteTimeout(): void {
+    if (this.reviewDeleteTimeout) {
+      clearTimeout(this.reviewDeleteTimeout);
+      this.reviewDeleteTimeout = null;
+    }
+  }
+
+  private deleteReview(reviewId: string): void {
+    const user = this.profile();
+    if (!user) return;
+
+    const review = this.authoredReviews().find(r => r.id === reviewId);
+    const revieweeId = review?.revieweeId ?? user.id;
+
+    this.http.delete(`/api/users/${revieweeId}/reviews/${reviewId}`).subscribe({
+      next: () => {
+        this.http.get<ReviewsResponse>(`/api/users/${user.id}/reviews`)
+          .subscribe((data) => this.reviewsData.set(data));
+        if (this.isOwner()) {
+          this.http.get<AuthoredReviewsResponse>(`/api/users/${user.id}/reviews-authored`)
+            .subscribe((data) => this.authoredReviews.set(data.reviews));
+        }
+      },
+      error: (err) => {
+        this.errorMessage.set(typeof err.error === 'string' ? err.error : 'Failed to delete review.');
+      }
+    });
+  }
+
+  adminBanUser(): void {
+    const user = this.profile();
+    if (!user || this.banning()) return;
+
+    let body: Record<string, string> = {};
+    if (user.isBanned) {
+      if (!confirm(`Unban @${user.username}?`)) return;
+    } else {
+      const reason = prompt(`Ban @${user.username}?\n\nReason (required):`);
+      if (reason === null) return;
+      const trimmed = reason.trim();
+      if (!trimmed) {
+        alert('A ban reason is required.');
+        return;
+      }
+      body = { reason: trimmed };
+    }
+
+    const action = user.isBanned ? 'unban' : 'ban';
+    this.banning.set(true);
+    this.http.post(`/api/admin/users/${user.id}/${action}`, body).subscribe({
+      next: () => {
+        this.profile.update(p => p ? { ...p, isBanned: !user.isBanned } : p);
+        this.banning.set(false);
+      },
+      error: () => this.banning.set(false),
+    });
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.confirmingDeleteReviewId()) return;
+    const target = event.target as HTMLElement;
+    if (!target.closest('.review-delete-btn')) {
+      this.clearReviewDeleteTimeout();
+      this.confirmingDeleteReviewId.set(null);
+    }
   }
 }

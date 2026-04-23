@@ -17,7 +17,10 @@
 }
 
 .loading {
-  color: #a0a8b8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40vh;
 }
 
 .empty-state {
@@ -39,6 +42,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, 220px);
   gap: 1.25rem;
+  animation: page-fade-in 100ms ease-out both;
 }
 
 .for-you-card {

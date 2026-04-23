@@ -4,40 +4,92 @@
       <ng-icon name="lucideArrowLeft" size="20"></ng-icon>
       Back to messages
     </a>
-    <h1>{{ otherUserName() || 'Conversation' }}</h1>
-    @if (listingTitle()) {
-      <p class="listing-context">Re: {{ listingTitle() }}</p>
+    @if (!loading()) {
+      <div class="user-row">
+        @if (otherUserHandle(); as username) {
+          <a [routerLink]="['/u', username]" class="user-link" [attr.aria-label]="'View ' + otherUserName() + ' profile'">
+            <span class="avatar">
+              @if (otherUserAvatarUrl()) {
+                <img [src]="otherUserAvatarUrl()" [alt]="otherUserName()" />
+              } @else {
+                <ng-icon name="lucideCircleUserRound"></ng-icon>
+              }
+            </span>
+            <h1>{{ otherUserName() || 'Conversation' }}</h1>
+            @if (otherUserRole() === 'faculty' || otherUserRole() === 'admin') {
+              <span class="role-badge" [class.faculty]="otherUserRole() === 'faculty'" [class.admin]="otherUserRole() === 'admin'">{{ otherUserRole() }}</span>
+            }
+            @if (otherUserIsBanned()) {
+              <span class="banned-tag">Banned</span>
+            }
+          </a>
+        } @else {
+          <span class="user-link">
+            <span class="avatar">
+              <ng-icon name="lucideCircleUserRound"></ng-icon>
+            </span>
+            <h1>{{ otherUserName() || 'Conversation' }}</h1>
+            @if (otherUserRole() === 'faculty' || otherUserRole() === 'admin') {
+              <span class="role-badge" [class.faculty]="otherUserRole() === 'faculty'" [class.admin]="otherUserRole() === 'admin'">{{ otherUserRole() }}</span>
+            }
+            @if (otherUserIsBanned()) {
+              <span class="banned-tag">Banned</span>
+            }
+          </span>
+        }
+      </div>
+      @if (listingTitle()) {
+        <a [routerLink]="['/listing', listingId]" class="listing-link">
+          <ng-icon name="lucideTag"></ng-icon>
+          <span>{{ listingTitle() }}</span>
+        </a>
+      }
     }
   </header>
 
   @if (loading()) {
-    <p class="loading-state">Loading conversation...</p>
+    <div class="loading-state">
+      <app-spinner label="Loading conversation" />
+    </div>
   } @else {
     <ul class="message-list">
-      @for (msg of messages(); track msg.id) {
-        <li class="message-bubble" [class.sent]="isFromMe(msg)" [class.received]="!isFromMe(msg)">
-          <p class="message-content">{{ msg.content }}</p>
-          <span class="message-time">{{ msg.createdAt | date:'MMM d, h:mm a' }}</span>
+      @for (group of groupedMessages(); track group.label) {
+        <li class="day-separator" [style.color]="group.color" aria-hidden="false">
+          <span>{{ group.label }}</span>
         </li>
+        @for (msg of group.messages; track msg.id) {
+          <li class="message-bubble" [class.sent]="isFromMe(msg)" [class.received]="!isFromMe(msg)">
+            <p class="message-content">{{ msg.content }}</p>
+            <span class="message-time">{{ msg.createdAt | date:'MMM d, h:mm a' }}</span>
+          </li>
+        }
       }
     </ul>
 
-    <form class="compose-form" (ngSubmit)="sendMessage()">
-      <textarea
-        [(ngModel)]="newMessage"
-        name="newMessage"
-        placeholder="Type your message..."
-        rows="2"
-        [disabled]="sending()"
-      ></textarea>
-      <button type="submit" class="send-btn" [disabled]="!newMessage.trim() || sending()">
-        @if (sending()) {
-          Sending...
-        } @else {
-          <ng-icon name="lucideSend" size="18"></ng-icon>
-          Send
-        }
-      </button>
-    </form>
+    @if (otherUserIsBanned()) {
+      <p class="compose-disabled">This user is banned. You can no longer message them.</p>
+    } @else if (authService.isBanned()) {
+      <p class="compose-disabled">You are banned and cannot send messages.</p>
+    } @else {
+      <form class="compose-form" (ngSubmit)="sendMessage()">
+        <textarea
+          #composeTextarea
+          [(ngModel)]="newMessage"
+          name="newMessage"
+          placeholder="Type your message..."
+          rows="1"
+          [disabled]="sending()"
+          (keydown)="onTextareaKeydown($event)"
+          (input)="resizeTextarea()"
+        ></textarea>
+        <button type="submit" class="send-btn" [disabled]="!newMessage.trim() || sending()" aria-label="Send message">
+          @if (sending()) {
+            <app-spinner size="1.125rem" label="Sending" />
+          } @else {
+            <ng-icon name="lucideSendHorizontal" size="20"></ng-icon>
+          }
+        </button>
+      </form>
+    }
   }
 </section>

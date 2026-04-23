@@ -1,13 +1,15 @@
 .loading {
-  text-align: center;
-  padding: 4rem 1.5rem;
-  color: #a0a8b8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40vh;
 }
 
 .profile-container {
   max-width: 900px;
   margin: 0 auto;
   padding: 2rem 1rem;
+  animation: page-fade-in 100ms ease-out both;
 }
 
 .profile-header {
@@ -66,9 +68,26 @@
   flex: 1;
 }
 
+.profile-actions-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .edit-btn {
   flex-shrink: 0;
   margin-top: 0.25rem;
+}
+
+.btn-preview {
+  background-color: rgba(251, 146, 60, 0.15);
+  color: #fdba74;
+  border: 1px solid rgba(251, 146, 60, 0.4);
+
+  &:hover:not(:disabled) {
+    background-color: rgba(251, 146, 60, 0.25);
+  }
 }
 
 .profile-info {
@@ -100,6 +119,10 @@
 
   &.faculty {
     background-color: #2f9e44;
+  }
+
+  &.admin {
+    background-color: #db2777;
   }
 }
 
@@ -275,6 +298,12 @@
   overflow-y: auto;
 }
 
+.privacy-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .checkbox-label {
   display: flex;
   align-items: center;
@@ -316,6 +345,67 @@
   letter-spacing: 1px;
 }
 
+.btn-admin-ban {
+  background-color: transparent;
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.5);
+
+  &:hover:not(:disabled) {
+    background-color: rgba(255, 107, 107, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.reviews-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.review-form {
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  background-color: #1c2230;
+  border: 1px solid #2a3244;
+  border-radius: 0.75rem;
+
+  h3 {
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+    color: #e0e0e0;
+  }
+
+  .star-selector {
+    font-size: 1.75rem;
+    color: #FECC02;
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 1rem;
+    letter-spacing: 2px;
+  }
+
+  .edit-textarea {
+    width: 100%;
+    margin-bottom: 1rem;
+    box-sizing: border-box;
+  }
+
+  .review-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+}
+
 .reviews-list {
   display: flex;
   flex-direction: column;
@@ -337,6 +427,57 @@
   .review-author {
     color: #a0a8b8;
     font-size: 0.8rem;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--color-accent);
+      text-decoration: underline;
+    }
+  }
+
+  .review-for {
+    color: var(--text-tertiary);
+    font-size: 0.8rem;
+  }
+
+  .review-date {
+    font-size: 0.8rem;
+    color: #888;
+    margin-left: auto;
+  }
+
+  .review-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    background-color: transparent;
+    color: var(--text-tertiary);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: color 0.2s ease, background-color 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+      color: #FECC02;
+      background-color: rgba(254, 204, 2, 0.12);
+    }
+
+    &.confirming {
+      color: var(--color-danger);
+      background-color: rgba(255, 107, 107, 0.15);
+
+      &:hover,
+      &:focus-visible {
+        color: var(--color-danger);
+        background-color: rgba(255, 107, 107, 0.22);
+      }
+    }
   }
 }
 
@@ -381,6 +522,8 @@
 }
 
 .profile-listings {
+  margin-bottom: 2rem;
+
   h2 {
     font-size: 1.25rem;
     font-weight: 600;

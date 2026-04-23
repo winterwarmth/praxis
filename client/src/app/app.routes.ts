@@ -13,6 +13,7 @@ import { ListingDetailPage } from './pages/listing-detail-page/listing-detail-pa
 import { CreateListingPage } from './pages/create-listing-page/create-listing-page';
 import { AdminDashboardPage } from './pages/admin-dashboard-page/admin-dashboard-page';
 import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -27,5 +28,5 @@ export const routes: Routes = [
   { path: 'messages/thread/:otherUserId/:listingId', component: MessageThreadPage, canActivate: [authGuard] },
   { path: 'listing/create', component: CreateListingPage, canActivate: [authGuard] },
   { path: 'listing/:id', component: ListingDetailPage, canActivate: [authGuard] },
-  { path: 'admin', component: AdminDashboardPage, canActivate: [authGuard] }
+  { path: 'admin', component: AdminDashboardPage, canActivate: [adminGuard] }
 ];

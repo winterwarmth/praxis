@@ -25,7 +25,7 @@
   </div>
 
   <div class="form-row">
-    <div class="form-group">
+    <div class="form-group form-group-compact">
       <label for="price">Price</label>
       <input
         id="price"
@@ -38,6 +38,21 @@
       />
     </div>
 
+    <button
+      type="button"
+      class="suggest-btn"
+      (click)="suggestCategory()"
+      [disabled]="suggestingCategory()"
+      aria-label="Auto-suggest category"
+      [title]="suggestingCategory() ? 'Thinking...' : 'Auto-suggest category'"
+    >
+      @if (suggestingCategory()) {
+        <app-spinner size="0.875rem" label="Suggesting" />
+      } @else {
+        <ng-icon name="lucideLightbulb"></ng-icon>
+      }
+    </button>
+
     <div class="form-group">
       <label for="category">Category</label>
       <select id="category" [(ngModel)]="category" class="form-input">
@@ -49,7 +64,7 @@
     </div>
 
     @if (category !== 'services' && category !== 'food' && category !== 'rent') {
-      <div class="form-group">
+      <div class="form-group form-group-condition">
         <label for="condition">Condition</label>
         <select id="condition" [(ngModel)]="condition" class="form-input">
           <option value="">None</option>

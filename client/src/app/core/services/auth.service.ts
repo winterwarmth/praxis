@@ -11,11 +11,16 @@ export class AuthService {
   private currentUser = signal<User | null>(null);
   private currentSession = signal<Session | null>(null);
   private loading = signal(true);
+  private dbRole = signal<string | null>(null);
+  private dbIsBanned = signal<boolean>(false);
 
   readonly user = this.currentUser.asReadonly();
   readonly session = this.currentSession.asReadonly();
   readonly isAuthenticated = computed(() => !!this.currentSession());
   readonly isLoading = this.loading.asReadonly();
+  readonly role = this.dbRole.asReadonly();
+  readonly isAdmin = computed(() => this.dbRole() === 'admin');
+  readonly isBanned = this.dbIsBanned.asReadonly();
 
   private supabase;
   private initialHash = typeof window !== 'undefined' ? window.location.hash : '';
@@ -70,6 +75,9 @@ export class AuthService {
   private async syncUser(): Promise<void> {
     try {
       await firstValueFrom(this.http.post('/api/auth/sync', {}));
+      const me = await firstValueFrom(this.http.get<{ role: string; isBanned: boolean }>('/api/auth/me'));
+      this.dbRole.set(me.role ?? null);
+      this.dbIsBanned.set(!!me.isBanned);
     } catch (err: any) {
       console.error('Failed to sync user with backend', err?.status, err?.error);
     }
@@ -140,6 +148,8 @@ export class AuthService {
   async signOut() {
     const { error } = await this.supabase.auth.signOut();
     if (!error) {
+      this.dbRole.set(null);
+      this.dbIsBanned.set(false);
       this.router.navigate(['/login']);
     }
     return { error };

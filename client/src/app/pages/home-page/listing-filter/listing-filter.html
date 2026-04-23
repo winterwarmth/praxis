@@ -23,6 +23,7 @@
       [value]="priceMin()"
       (input)="onPriceMinInput($event)"
       min="0"
+      [disabled]="freeOnly()"
     />
     <span>-</span>
     <input
@@ -31,18 +32,26 @@
       [value]="priceMax()"
       (input)="onPriceMaxInput($event)"
       min="0"
+      [disabled]="freeOnly()"
     />
   </div>
 
+  <h3>Condition</h3>
+  <select [value]="minCondition()" (change)="onConditionChange($event)">
+    @for (cond of conditionOptions; track cond.value) {
+      <option [value]="cond.value">{{ cond.label }}</option>
+    }
+  </select>
+
   <h3>Payment</h3>
-  @for (method of paymentMethods; track method) {
+  @for (method of paymentMethods; track method.value) {
     <label class="checkbox-label">
       <input
         type="checkbox"
-        [checked]="selectedPayments().includes(method)"
-        (change)="onTogglePayment(method)"
+        [checked]="selectedPayments().includes(method.value)"
+        (change)="onTogglePayment(method.value)"
       />
-      {{ method }}
+      {{ method.label }}
     </label>
   }
 

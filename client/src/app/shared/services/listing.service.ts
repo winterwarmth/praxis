@@ -30,6 +30,7 @@ export interface ListingSeller {
   profileImageUrl: string | null;
   role: string;
   preferredPaymentMethods: string;
+  isBanned: boolean;
 }
 
 export interface ListingCourse {
@@ -70,6 +71,8 @@ export interface ListingFilters {
   sellerId?: string;
   status?: string;
   courseId?: string;
+  minCondition?: string;
+  payments?: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -92,6 +95,10 @@ export class ListingService {
       params = params.set('status', filters.status);
     if (filters?.courseId)
       params = params.set('courseId', filters.courseId);
+    if (filters?.minCondition)
+      params = params.set('minCondition', filters.minCondition);
+    if (filters?.payments && filters.payments.length > 0)
+      params = params.set('payments', filters.payments.join(','));
 
     return this.http.get<Listing[]>('/api/listings', { params });
   }

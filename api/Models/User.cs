@@ -43,4 +43,22 @@ public class User
 
     [Column("preferred_payment_methods")]
     public string PreferredPaymentMethods { get; set; } = "";
+
+    [Column("is_banned")]
+    public bool IsBanned { get; set; }
+
+    [Column("banned_at")]
+    public DateTime? BannedAt { get; set; }
+
+    [Column("ban_reason")]
+    public string? BanReason { get; set; }
+
+    [Column("show_courses")]
+    public bool ShowCourses { get; set; }
+
+    [Column("show_email")]
+    public bool ShowEmail { get; set; }
+
+    [Column("auto_payment_filter")]
+    public bool AutoPaymentFilter { get; set; }
 }

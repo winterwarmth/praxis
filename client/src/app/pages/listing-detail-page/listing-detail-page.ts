@@ -9,6 +9,9 @@ import { SavedItemsService } from '../../shared/services/saved-items.service';
 import { ListingCourse, ListingDetail, ListingImage, ListingService } from '../../shared/services/listing.service';
 import { MessagingService } from '../../shared/services/messaging.service';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { AuthService } from '../../core/services/auth.service';
+import { Spinner } from '../../shared/ui/spinner/spinner';
+import { CONDITIONS, formatCondition } from '../../shared/constants/conditions';
 
 interface ImagePreview {
   file: File;
@@ -37,18 +40,11 @@ const CATEGORIES = [
   'textbooks', 'tickets', 'services', 'other',
 ] as const;
 
-const CONDITIONS = [
-  { value: '', label: 'None' },
-  { value: 'new', label: 'New' },
-  { value: 'like_new', label: 'Like New' },
-  { value: 'good', label: 'Good' },
-  { value: 'fair', label: 'Fair' },
-  { value: 'poor', label: 'Poor' },
-] as const;
+const EDIT_CONDITIONS = [{ value: '', label: 'None' }, ...CONDITIONS] as const;
 
 @Component({
   selector: 'app-listing-detail-page',
-  imports: [RouterLink, CurrencyPipe, FormsModule, NgIcon],
+  imports: [RouterLink, CurrencyPipe, FormsModule, NgIcon, Spinner],
   templateUrl: './listing-detail-page.html',
   styleUrl: './listing-detail-page.scss',
 })
@@ -60,6 +56,8 @@ export class ListingDetailPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly supabaseService = inject(SupabaseService);
   private readonly router = inject(Router);
+  protected readonly authService = inject(AuthService);
+  protected readonly adminRemoving = signal(false);
 
   protected readonly listing = signal<ListingDetail | null>(null);
   protected readonly loading = signal(true);
@@ -96,7 +94,8 @@ export class ListingDetailPage implements OnInit {
   protected readonly dragOverType = signal<'existing' | 'new' | null>(null);
 
   protected readonly categories = CATEGORIES;
-  protected readonly conditions = CONDITIONS;
+  protected readonly conditions = EDIT_CONDITIONS;
+  protected readonly formatCondition = formatCondition;
 
   protected readonly isOwner = computed(() => {
     const l = this.listing();
@@ -214,6 +213,19 @@ export class ListingDetailPage implements OnInit {
         this.router.navigate(['/messages', 'thread', l.seller!.id, l.id]);
       },
       error: () => this.contacting.set(false),
+    });
+  }
+
+  protected adminRemoveListing(): void {
+    const l = this.listing();
+    if (!l || this.adminRemoving()) return;
+    if (!confirm(`Remove listing "${l.title}"? This cannot be undone.`)) return;
+    this.adminRemoving.set(true);
+    this.http.delete(`/api/admin/listings/${l.id}`).subscribe({
+      next: () => {
+        this.router.navigate(['/home']);
+      },
+      error: () => this.adminRemoving.set(false),
     });
   }
 

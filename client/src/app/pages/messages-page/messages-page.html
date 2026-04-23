@@ -3,7 +3,11 @@
     <h1>Messages</h1>
   </header>
 
-  @if (threads().length === 0) {
+  @if (isLoading()) {
+    <div class="loading-state">
+      <app-spinner label="Loading messages" />
+    </div>
+  } @else if (threads().length === 0) {
     <p class="empty-state">
       You don't have any active conversations yet. Reach out to a seller from a listing page to start messaging!
     </p>
@@ -11,29 +15,79 @@
     <ul class="message-list">
       @for (thread of threads(); track thread.id) {
         <li class="message-item" [class.unread]="thread.isUnread">
+          <div class="avatar">
+            @if (thread.otherUserAvatarUrl) {
+              <img [src]="thread.otherUserAvatarUrl" [alt]="thread.otherUserName" />
+            } @else {
+              <ng-icon name="lucideCircleUserRound"></ng-icon>
+            }
+          </div>
+
           @if (getThreadRoute(thread); as route) {
             <a [routerLink]="route" class="message-link">
-              <h2>{{ thread.otherUserName }}</h2>
-              <p class="item-reference">Re: {{ thread.itemTitle }}</p>
+              <div class="thread-title">
+                @if (thread.otherUserRole === 'faculty' || thread.otherUserRole === 'admin') {
+                  <span class="role-badge" [class.faculty]="thread.otherUserRole === 'faculty'" [class.admin]="thread.otherUserRole === 'admin'">{{ thread.otherUserRole }}</span>
+                }
+                @if (thread.otherUserIsBanned) {
+                  <span class="banned-tag">Banned</span>
+                }
+                <span class="other-user">{{ thread.otherUserName }}</span>
+                <span class="separator">·</span>
+                <span class="item-reference">{{ thread.itemTitle }}</span>
+              </div>
               <p class="last-message">{{ thread.lastMessage }}</p>
             </a>
           } @else {
             <div class="message-link">
-              <h2>{{ thread.otherUserName }}</h2>
-              <p class="item-reference">Re: {{ thread.itemTitle }}</p>
+              <div class="thread-title">
+                @if (thread.otherUserRole === 'faculty' || thread.otherUserRole === 'admin') {
+                  <span class="role-badge" [class.faculty]="thread.otherUserRole === 'faculty'" [class.admin]="thread.otherUserRole === 'admin'">{{ thread.otherUserRole }}</span>
+                }
+                @if (thread.otherUserIsBanned) {
+                  <span class="banned-tag">Banned</span>
+                }
+                <span class="other-user">{{ thread.otherUserName }}</span>
+                <span class="separator">·</span>
+                <span class="item-reference">{{ thread.itemTitle }}</span>
+              </div>
               <p class="last-message">{{ thread.lastMessage }}</p>
             </div>
           }
-          
+
           <div class="message-actions">
-            <span class="timestamp">{{ thread.timestamp | date:'MMM d, h:mm a' }}</span>
-            <button
-              type="button"
-              class="remove-button"
-              (click)="removeThread(thread.id)"
-            >
-              Delete
-            </button>
+            <div class="timestamps">
+              <span class="timestamp-relative">{{ getRelativeTime(thread.timestamp) }}</span>
+              <span class="timestamp-separator">·</span>
+              <span class="timestamp-absolute">{{ thread.timestamp | date:'MMM d, h:mm a' }}</span>
+            </div>
+            <div class="action-buttons">
+              <button
+                type="button"
+                class="read-toggle-button"
+                [attr.aria-label]="thread.isUnread ? 'Mark as read' : 'Mark as unread'"
+                (click)="toggleReadState(thread, $event)"
+              >
+                @if (thread.isUnread) {
+                  <ng-icon name="lucideMailOpen"></ng-icon>
+                } @else {
+                  <ng-icon name="lucideMail"></ng-icon>
+                }
+              </button>
+              <button
+                type="button"
+                class="remove-button"
+                [class.confirming]="confirmingDeleteId() === thread.id"
+                [attr.aria-label]="confirmingDeleteId() === thread.id ? 'Confirm delete' : 'Delete conversation'"
+                (click)="onDeleteClick(thread.id)"
+              >
+                @if (confirmingDeleteId() === thread.id) {
+                  <ng-icon name="lucideFlame"></ng-icon>
+                } @else {
+                  <ng-icon name="lucideTrash2"></ng-icon>
+                }
+              </button>
+            </div>
           </div>
         </li>
       }

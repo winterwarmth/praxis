@@ -44,6 +44,13 @@
   }
 }
 
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40vh;
+}
+
 .empty-state {
   color: #a0a8b8;
   line-height: 1.6;
