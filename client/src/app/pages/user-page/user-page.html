@@ -81,18 +81,33 @@
           <h1>{{ user.firstName }} {{ user.lastName }}</h1>
           <p class="username">
             @{{ user.username }}
-            <span class="role-badge" [class.faculty]="user.role === 'faculty'">{{ user.role || 'student' }}</span>
+            <span class="role-badge" [class.faculty]="user.role === 'faculty'" [class.admin]="user.role === 'admin'">{{ user.role || 'student' }}</span>
+            @if (user.isBanned) {
+              <span class="banned-tag">Banned</span>
+            }
           </p>
         }
       </div>
-      @if (isOwner() && !isEditing()) {
-        <button class="btn btn-secondary edit-btn" (click)="startEditing()">Edit Profile</button>
-      }
+      <div class="profile-actions-row">
+        @if (trueIsOwner() && !isEditing() && !user.isBanned) {
+          <button class="btn edit-btn btn-preview" (click)="togglePreview()">
+            {{ previewMode() ? 'Exit preview' : 'Public preview' }}
+          </button>
+          @if (!previewMode()) {
+            <button class="btn btn-secondary edit-btn" (click)="startEditing()">Edit Profile</button>
+          }
+        }
+        @if (authService.isAdmin() && currentUserId() && !trueIsOwner()) {
+          <button class="btn btn-admin-ban edit-btn" (click)="adminBanUser()" [disabled]="banning()">
+            {{ user.isBanned ? (banning() ? 'Unbanning...' : 'Unban user') : (banning() ? 'Banning...' : 'Ban user') }}
+          </button>
+        }
+      </div>
       </div>
     </div>
 
     <div class="profile-details">
-      @if (isOwner()) {
+      @if ((isOwner() || user.showEmail) && user.email) {
         <div class="detail-item">
           <ng-icon name="lucideMenu"></ng-icon>
           <span>{{ user.email }}</span>
@@ -141,10 +156,30 @@
     </div>
 
 
-    <!-- Courses (owner only) -->
-    @if (isOwner()) {
+    @if (isOwner() && isEditing()) {
       <div class="profile-section">
-        <h2>My Courses</h2>
+        <h2>Preferences</h2>
+        <div class="privacy-options">
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="editForm.showEmail" />
+            Show email on my public profile
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="editForm.showCourses" />
+            Show courses on my public profile
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" [(ngModel)]="editForm.autoPaymentFilter" />
+            Auto-filter listings by my preferred payments
+          </label>
+        </div>
+      </div>
+    }
+
+    <!-- Courses -->
+    @if (isOwner() || user.showCourses) {
+      <div class="profile-section">
+        <h2>{{ isOwner() ? 'My Courses' : 'Courses' }}</h2>
         @if (isEditing()) {
           <input
             type="text"
@@ -237,10 +272,13 @@
               <div class="review-header">
                 <span class="stars">{{ getStars(review.rating) }}</span>
                 <a class="review-author" [routerLink]="['/u', review.reviewerUsername]">@{{ review.reviewerUsername }}</a>
+                @if (review.reviewerIsBanned) {
+                  <span class="banned-tag">Banned</span>
+                }
                 <span class="review-date">
                   {{ review.createdAt | date:'MMM d, yyyy' }}
                 </span>
-                @if (review.reviewerId === currentUserId()) {
+                @if (!previewMode() && (review.reviewerId === currentUserId() || authService.isAdmin())) {
                   <button
                     type="button"
                     class="review-delete-btn"
@@ -293,6 +331,7 @@
               [category]="listing.category"
               [condition]="listing.condition"
               [imageUrl]="listing.imageUrl"
+              [sellerIsBanned]="!!user.isBanned"
             />
           }
         </div>
@@ -316,6 +355,9 @@
                   <span class="stars">{{ getStars(review.rating) }}</span>
                   <span class="review-for">for</span>
                   <a class="review-author" [routerLink]="['/u', review.revieweeUsername]">@{{ review.revieweeUsername }}</a>
+                  @if (review.revieweeIsBanned) {
+                    <span class="banned-tag">Banned</span>
+                  }
                   <span class="review-date">
                     {{ review.createdAt | date:'MMM d, yyyy' }}
                   </span>

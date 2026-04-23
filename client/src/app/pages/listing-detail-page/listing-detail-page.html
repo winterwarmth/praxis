@@ -71,11 +71,14 @@
             }
           </div>
         } @else {
-          <div class="main-image">
+          <div class="main-image" [class.banned-border]="l.seller?.isBanned">
             @if (selectedImageUrl()) {
               <img [src]="selectedImageUrl()" [alt]="l.title" />
             } @else {
               <div class="no-image">No image</div>
+            }
+            @if (l.seller?.isBanned) {
+              <span class="banned-watermark">Banned</span>
             }
           </div>
           @if (l.images.length > 1) {
@@ -250,7 +253,7 @@
               <ng-icon name="lucideBookmark" size="16"></ng-icon>
               {{ isSaved() ? 'Saved' : 'Save' }}
             </button>
-            @if (l.seller && !isOwner()) {
+            @if (l.seller && !isOwner() && !l.seller.isBanned) {
               <button
                 class="btn btn-message"
                 (click)="contactSeller()"
@@ -263,6 +266,12 @@
             @if (isOwner()) {
               <button class="btn btn-edit" (click)="startEditing()">
                 Edit
+              </button>
+            }
+            @if (authService.isAdmin() && currentUserId() && !isOwner()) {
+              <button class="btn btn-admin-remove" (click)="adminRemoveListing()" [disabled]="adminRemoving()">
+                <ng-icon name="lucideShield" size="16"></ng-icon>
+                {{ adminRemoving() ? 'Removing...' : 'Remove' }}
               </button>
             }
           </div>
@@ -287,10 +296,15 @@
                   }
                 </div>
                 <div class="seller-info">
-                  <span class="seller-name">{{ seller.firstName }} {{ seller.lastName }}</span>
+                  <span class="seller-name">
+                    {{ seller.firstName }} {{ seller.lastName }}
+                    @if (seller.isBanned) {
+                      <span class="banned-tag">Banned</span>
+                    }
+                  </span>
                   <span class="seller-username">
                     @{{ seller.username }}
-                    <span class="role-badge" [class.faculty]="seller.role === 'faculty'">{{ seller.role }}</span>
+                    <span class="role-badge" [class.faculty]="seller.role === 'faculty'" [class.admin]="seller.role === 'admin'">{{ seller.role }}</span>
                   </span>
                   @if (sellerReviews(); as reviews) {
                     <span class="seller-rating">

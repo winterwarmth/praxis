@@ -5,6 +5,7 @@ import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import { MessagingService, ThreadMessage } from '../../shared/services/messaging.service';
 import { Spinner } from '../../shared/ui/spinner/spinner';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-message-thread-page',
@@ -16,12 +17,14 @@ export class MessageThreadPage implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private messagingService = inject(MessagingService);
+  protected authService = inject(AuthService);
 
   protected messages = signal<ThreadMessage[]>([]);
   protected otherUserName = signal<string>('');
   protected otherUserHandle = signal<string | null>(null);
   protected otherUserAvatarUrl = signal<string | null>(null);
   protected otherUserRole = signal<string>('student');
+  protected otherUserIsBanned = signal<boolean>(false);
   protected listingTitle = signal<string>('');
   protected newMessage = '';
   protected sending = signal(false);
@@ -55,6 +58,7 @@ export class MessageThreadPage implements OnInit {
         this.otherUserHandle.set(response.otherUserHandle);
         this.otherUserAvatarUrl.set(response.otherUserAvatarUrl);
         this.otherUserRole.set(response.otherUserRole);
+        this.otherUserIsBanned.set(!!response.otherUserIsBanned);
         this.listingTitle.set(response.listingTitle);
         this.loading.set(false);
         this.messagingService.markThreadRead(this.otherUserId, this.listingId).subscribe({

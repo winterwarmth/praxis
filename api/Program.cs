@@ -60,6 +60,112 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// --- Admin endpoints ---
+
+static async Task<PraxisApi.Models.User?> GetAdminAsync(PraxisDbContext db, ClaimsPrincipal user)
+{
+    var supabaseId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub");
+    if (string.IsNullOrEmpty(supabaseId)) return null;
+    var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
+    return dbUser?.Role == "admin" ? dbUser : null;
+}
+
+app.MapGet("/api/admin/banned-users", async (PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var admin = await GetAdminAsync(db, user);
+    if (admin == null) return Results.Forbid();
+
+    var banned = await db.Users
+        .Where(u => u.IsBanned)
+        .OrderByDescending(u => u.BannedAt)
+        .Select(u => new
+        {
+            u.Id,
+            u.Username,
+            u.FirstName,
+            u.LastName,
+            u.Email,
+            u.BannedAt,
+            u.BanReason,
+            JoinDate = u.CreatedAt,
+            AvgRatingReceived = db.Reviews.Where(r => r.RevieweeId == u.Id).Select(r => (double?)r.Rating).Average() ?? 0.0,
+            TotalReviewsReceived = db.Reviews.Count(r => r.RevieweeId == u.Id),
+            ActiveListings = db.Listings.Count(l => l.SellerId == u.Id && l.Status == "active"),
+            SoldListings = db.Listings.Count(l => l.SellerId == u.Id && l.Status == "sold"),
+            ReviewsAuthored = db.Reviews.Count(r => r.ReviewerId == u.Id),
+            AvgRatingGiven = db.Reviews.Where(r => r.ReviewerId == u.Id).Select(r => (double?)r.Rating).Average() ?? 0.0,
+        })
+        .ToListAsync();
+
+    return Results.Ok(banned);
+})
+.RequireAuthorization();
+
+app.MapPost("/api/admin/users/{userId:guid}/ban", async (Guid userId, PraxisDbContext db, ClaimsPrincipal user, BanRequest body) =>
+{
+    var admin = await GetAdminAsync(db, user);
+    if (admin == null) return Results.Forbid();
+
+    var target = await db.Users.FindAsync(userId);
+    if (target == null) return Results.NotFound();
+    if (target.Id == admin.Id) return Results.BadRequest("Cannot ban yourself.");
+
+    var reason = body?.Reason?.Trim();
+    if (string.IsNullOrWhiteSpace(reason))
+        return Results.BadRequest("Ban reason is required.");
+
+    target.IsBanned = true;
+    target.BannedAt = DateTime.UtcNow;
+    target.BanReason = reason;
+    await db.SaveChangesAsync();
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapPost("/api/admin/users/{userId:guid}/unban", async (Guid userId, PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var admin = await GetAdminAsync(db, user);
+    if (admin == null) return Results.Forbid();
+
+    var target = await db.Users.FindAsync(userId);
+    if (target == null) return Results.NotFound();
+
+    target.IsBanned = false;
+    target.BannedAt = null;
+    target.BanReason = null;
+    await db.SaveChangesAsync();
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapDelete("/api/admin/listings/{listingId:guid}", async (Guid listingId, PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var admin = await GetAdminAsync(db, user);
+    if (admin == null) return Results.Forbid();
+
+    var listing = await db.Listings.FindAsync(listingId);
+    if (listing == null) return Results.NotFound();
+
+    db.Listings.Remove(listing);
+    await db.SaveChangesAsync();
+    return Results.Ok();
+})
+.RequireAuthorization();
+
+app.MapDelete("/api/admin/reviews/{reviewId:guid}", async (Guid reviewId, PraxisDbContext db, ClaimsPrincipal user) =>
+{
+    var admin = await GetAdminAsync(db, user);
+    if (admin == null) return Results.Forbid();
+
+    var review = await db.Reviews.FindAsync(reviewId);
+    if (review == null) return Results.NotFound();
+
+    db.Reviews.Remove(review);
+    await db.SaveChangesAsync();
+    return Results.Ok();
+})
+.RequireAuthorization();
+
 // --- Auth endpoints ---
 
 app.MapPost("/api/auth/sync", async (PraxisDbContext db, ClaimsPrincipal user) =>
@@ -135,7 +241,7 @@ app.MapGet("/api/auth/me", async (PraxisDbContext db, ClaimsPrincipal user) =>
     if (dbUser == null)
         return Results.NotFound();
 
-    return Results.Ok(new { dbUser.Id, dbUser.Email, dbUser.Username, dbUser.FirstName, dbUser.LastName, dbUser.ProfileImageUrl, dbUser.Role, dbUser.Bio, dbUser.UsernameChangedAt, dbUser.PreferredPaymentMethods });
+    return Results.Ok(new { dbUser.Id, dbUser.Email, dbUser.Username, dbUser.FirstName, dbUser.LastName, dbUser.ProfileImageUrl, dbUser.Role, dbUser.Bio, dbUser.UsernameChangedAt, dbUser.PreferredPaymentMethods, dbUser.IsBanned, dbUser.ShowCourses, dbUser.ShowEmail, dbUser.AutoPaymentFilter });
 })
 .RequireAuthorization();
 
@@ -149,6 +255,9 @@ app.MapPut("/api/auth/profile", async (PraxisDbContext db, ClaimsPrincipal user,
     var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
     if (dbUser == null)
         return Results.NotFound();
+
+    if (dbUser.IsBanned)
+        return Results.Forbid();
 
     var body = await context.Request.ReadFromJsonAsync<ProfileUpdateRequest>();
     if (body == null)
@@ -175,11 +284,14 @@ app.MapPut("/api/auth/profile", async (PraxisDbContext db, ClaimsPrincipal user,
     if (body.Bio != null) dbUser.Bio = body.Bio;
     if (body.PreferredPaymentMethods != null) dbUser.PreferredPaymentMethods = body.PreferredPaymentMethods;
     if (body.ProfileImageUrl != null) dbUser.ProfileImageUrl = body.ProfileImageUrl;
+    if (body.ShowCourses.HasValue) dbUser.ShowCourses = body.ShowCourses.Value;
+    if (body.ShowEmail.HasValue) dbUser.ShowEmail = body.ShowEmail.Value;
+    if (body.AutoPaymentFilter.HasValue) dbUser.AutoPaymentFilter = body.AutoPaymentFilter.Value;
 
     dbUser.UpdatedAt = DateTime.UtcNow;
     await db.SaveChangesAsync();
 
-    return Results.Ok(new { dbUser.Id, dbUser.Email, dbUser.Username, dbUser.FirstName, dbUser.LastName, dbUser.ProfileImageUrl, dbUser.Role, dbUser.Bio, dbUser.UsernameChangedAt, dbUser.PreferredPaymentMethods });
+    return Results.Ok(new { dbUser.Id, dbUser.Email, dbUser.Username, dbUser.FirstName, dbUser.LastName, dbUser.ProfileImageUrl, dbUser.Role, dbUser.Bio, dbUser.UsernameChangedAt, dbUser.PreferredPaymentMethods, dbUser.IsBanned, dbUser.ShowCourses, dbUser.ShowEmail, dbUser.AutoPaymentFilter });
 })
 .RequireAuthorization();
 
@@ -361,25 +473,47 @@ app.MapPost("/api/semesters/find-or-create", async (PraxisDbContext db, FindOrCr
     return Results.Ok(new { semester.Id });
 });
 
-app.MapGet("/api/users/by-username/{username}", async (string username, PraxisDbContext db) =>
+app.MapGet("/api/users/by-username/{username}", async (string username, PraxisDbContext db, ClaimsPrincipal claims) =>
 {
-    var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
-    if (user == null)
+    var target = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
+    if (target == null)
         return Results.NotFound();
+
+    var supabaseId = claims.FindFirstValue(ClaimTypes.NameIdentifier) ?? claims.FindFirstValue("sub");
+    var caller = !string.IsNullOrEmpty(supabaseId)
+        ? await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId)
+        : null;
+    var isSelf = caller != null && caller.Id == target.Id;
+
+    var canSeeCourses = isSelf || target.ShowCourses;
+    var canSeeEmail = isSelf || target.ShowEmail;
+
+    var courses = canSeeCourses
+        ? await db.UserCourses
+            .Where(uc => uc.UserId == target.Id)
+            .Select(uc => new { uc.Course!.Id, uc.Course.SubjectCode, uc.Course.CourseNumber, uc.Course.CourseName })
+            .ToListAsync()
+        : new();
 
     return Results.Ok(new
     {
-        user.Id,
-        user.Email,
-        user.Username,
-        user.FirstName,
-        user.LastName,
-        user.ProfileImageUrl,
-        user.Role,
-        user.Bio,
-        user.PreferredPaymentMethods,
+        target.Id,
+        Email = canSeeEmail ? target.Email : null,
+        target.Username,
+        target.FirstName,
+        target.LastName,
+        target.ProfileImageUrl,
+        target.Role,
+        target.Bio,
+        target.PreferredPaymentMethods,
+        target.IsBanned,
+        target.ShowCourses,
+        target.ShowEmail,
+        target.AutoPaymentFilter,
+        Courses = courses,
     });
-});
+})
+.RequireAuthorization();
 
 // --- Review endpoints ---
 
@@ -398,12 +532,14 @@ app.MapGet("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbConte
             r.CreatedAt,
             ReviewerName = r.Reviewer != null ? $"{r.Reviewer.FirstName} {r.Reviewer.LastName}" : "Unknown",
             ReviewerUsername = r.Reviewer != null ? r.Reviewer.Username : "unknown",
+            ReviewerIsBanned = r.Reviewer != null && r.Reviewer.IsBanned,
         })
         .ToListAsync();
 
-    var avgRating = reviews.Count > 0 ? reviews.Average(r => r.Rating) : 0;
+    var counted = reviews.Where(r => !r.ReviewerIsBanned).ToList();
+    var avgRating = counted.Count > 0 ? counted.Average(r => r.Rating) : 0;
 
-    return Results.Ok(new { reviews, averageRating = Math.Round(avgRating, 1), totalReviews = reviews.Count });
+    return Results.Ok(new { reviews, averageRating = Math.Round(avgRating, 1), totalReviews = counted.Count });
 });
 app.MapGet("/api/users/{userId:guid}/reviews-authored", async (Guid userId, PraxisDbContext db) =>
 {
@@ -420,6 +556,7 @@ app.MapGet("/api/users/{userId:guid}/reviews-authored", async (Guid userId, Prax
             r.CreatedAt,
             RevieweeName = r.Reviewee != null ? $"{r.Reviewee.FirstName} {r.Reviewee.LastName}" : "Unknown",
             RevieweeUsername = r.Reviewee != null ? r.Reviewee.Username : "unknown",
+            RevieweeIsBanned = r.Reviewee != null && r.Reviewee.IsBanned,
         })
         .ToListAsync();
 
@@ -440,7 +577,7 @@ app.MapDelete("/api/users/{userId:guid}/reviews/{reviewId:guid}", async (Guid us
     if (review == null)
         return Results.NotFound();
 
-    if (review.ReviewerId != dbUser.Id)
+    if (review.ReviewerId != dbUser.Id && dbUser.Role != "admin")
         return Results.Forbid();
 
     db.Reviews.Remove(review);
@@ -458,6 +595,9 @@ app.MapPost("/api/users/{userId:guid}/reviews", async (Guid userId, PraxisDbCont
     var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
     if (dbUser == null)
         return Results.NotFound();
+
+    if (dbUser.IsBanned)
+        return Results.Forbid();
 
     if (dbUser.Id == userId)
         return Results.BadRequest("You cannot review yourself.");
@@ -500,7 +640,9 @@ app.MapGet("/api/listings", async (
     decimal? maxPrice,
     Guid? sellerId,
     string? status,
-    Guid? courseId) =>
+    Guid? courseId,
+    string? minCondition,
+    string? payments) =>
 {
     var query = db.Listings
         .Where(l => l.Status == (status ?? "active"))
@@ -508,6 +650,8 @@ app.MapGet("/api/listings", async (
 
     if (sellerId.HasValue)
         query = query.Where(l => l.SellerId == sellerId.Value);
+    else
+        query = query.Where(l => !db.Users.Any(u => u.Id == l.SellerId && u.IsBanned));
 
     if (!string.IsNullOrWhiteSpace(search))
         query = query.Where(l => l.Title.ToLower().Contains(search.ToLower()));
@@ -524,10 +668,36 @@ app.MapGet("/api/listings", async (
     if (courseId.HasValue)
         query = query.Where(l => l.ListingCourses.Any(lc => lc.CourseId == courseId.Value));
 
+    if (!string.IsNullOrWhiteSpace(payments))
+    {
+        var methods = payments.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        query = query.Where(l => db.Users.Any(u =>
+            u.Id == l.SellerId &&
+            methods.Any(m => ("," + (u.PreferredPaymentMethods ?? "") + ",").Contains("," + m + ","))
+        ));
+    }
+
+    var conditionOrder = new[] { "new", "like_new", "good", "fair", "poor" };
+    if (!string.IsNullOrWhiteSpace(minCondition))
+    {
+        var idx = Array.IndexOf(conditionOrder, minCondition);
+        if (idx >= 0)
+        {
+            var accepted = conditionOrder.Take(idx + 1).ToList();
+            query = query.Where(l => l.Condition != null && accepted.Contains(l.Condition));
+        }
+    }
+
     query = sort switch
     {
         "price-low" => query.OrderBy(l => l.Price),
         "price-high" => query.OrderByDescending(l => l.Price),
+        "condition" => query.OrderBy(l =>
+            l.Condition == "new" ? 0 :
+            l.Condition == "like_new" ? 1 :
+            l.Condition == "good" ? 2 :
+            l.Condition == "fair" ? 3 :
+            l.Condition == "poor" ? 4 : 5),
         _ => query.OrderByDescending(l => l.CreatedAt),
     };
 
@@ -580,6 +750,7 @@ app.MapGet("/api/listings/{id:guid}", async (Guid id, PraxisDbContext db) =>
                     u.ProfileImageUrl,
                     u.Role,
                     u.PreferredPaymentMethods,
+                    u.IsBanned,
                 })
                 .FirstOrDefault(),
             Courses = l.ListingCourses
@@ -607,6 +778,9 @@ app.MapPost("/api/listings", async (PraxisDbContext db, ClaimsPrincipal user, Ht
     var dbUser = await db.Users.FirstOrDefaultAsync(u => u.SupabaseId == supabaseId);
     if (dbUser == null)
         return Results.NotFound("User not found.");
+
+    if (dbUser.IsBanned)
+        return Results.Forbid();
 
     var body = await context.Request.ReadFromJsonAsync<CreateListingRequest>();
     if (body == null || string.IsNullOrWhiteSpace(body.Title) || string.IsNullOrWhiteSpace(body.Category))
@@ -889,6 +1063,7 @@ app.MapGet("/api/messages", async (PraxisDbContext db, ClaimsPrincipal user) =>
                 OtherUserName = otherUser != null ? $"{otherUser.FirstName} {otherUser.LastName}" : "Unknown User",
                 OtherUserAvatarUrl = otherUser?.ProfileImageUrl,
                 OtherUserRole = otherUser?.Role ?? "student",
+                OtherUserIsBanned = otherUser?.IsBanned ?? false,
                 ItemTitle = latest.Listing?.Title ?? "Deleted Listing",
                 LastMessage = latest.Content,
                 IsUnread = !latest.IsRead && latest.ReceiverId == userId,
@@ -943,6 +1118,7 @@ app.MapGet("/api/messages/thread", async (PraxisDbContext db, ClaimsPrincipal us
         OtherUserHandle = otherUser?.Username,
         OtherUserAvatarUrl = otherUser?.ProfileImageUrl,
         OtherUserRole = otherUser?.Role ?? "student",
+        OtherUserIsBanned = otherUser?.IsBanned ?? false,
         ListingTitle = listing?.Title ?? "Deleted Listing"
     });
 })
@@ -1013,6 +1189,9 @@ app.MapPost("/api/messages", async (PraxisDbContext db, ClaimsPrincipal user, Cr
     if (dbUser == null)
         return Results.NotFound();
 
+    if (dbUser.IsBanned)
+        return Results.Forbid();
+
     if (dbUser.Id == body.ReceiverId)
         return Results.BadRequest("Cannot send a message to yourself.");
 
@@ -1021,6 +1200,10 @@ app.MapPost("/api/messages", async (PraxisDbContext db, ClaimsPrincipal user, Cr
         : null;
     if (body.ListingId.HasValue && listing == null)
         return Results.NotFound("Listing not found.");
+
+    var receiverIsBanned = await db.Users.AnyAsync(u => u.Id == body.ReceiverId && u.IsBanned);
+    if (receiverIsBanned)
+        return Results.Forbid();
 
     var receiverExists = await db.Users.AnyAsync(u => u.Id == body.ReceiverId);
     if (!receiverExists)
@@ -1058,7 +1241,7 @@ app.MapPost("/api/messages", async (PraxisDbContext db, ClaimsPrincipal user, Cr
 
 app.Run();
 
-record ProfileUpdateRequest(string? FirstName, string? LastName, string? Username, string? Bio, string? PreferredPaymentMethods, string? ProfileImageUrl);
+record ProfileUpdateRequest(string? FirstName, string? LastName, string? Username, string? Bio, string? PreferredPaymentMethods, string? ProfileImageUrl, bool? ShowCourses, bool? ShowEmail, bool? AutoPaymentFilter);
 record CreateListingRequest(string Title, string? Description, decimal Price, string Category, string? Condition, List<string>? ImageUrls);
 record CreateMessageRequest(Guid ReceiverId, Guid? ListingId, string Content);
 record MarkThreadReadRequest(Guid OtherUserId, Guid ListingId);
@@ -1066,3 +1249,4 @@ record UpdateListingRequest(string? Title, string? Description, decimal? Price, 
 record FindOrCreateSemester(string Term, int Year, string Name);
 record CreateReviewRequest(int Rating, string? Comment);
 record ClassifyRequest(string Title, string? Description);
+record BanRequest(string? Reason);

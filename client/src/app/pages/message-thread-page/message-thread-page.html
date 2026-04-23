@@ -16,8 +16,11 @@
               }
             </span>
             <h1>{{ otherUserName() || 'Conversation' }}</h1>
-            @if (otherUserRole() === 'faculty') {
-              <span class="role-badge faculty">{{ otherUserRole() }}</span>
+            @if (otherUserRole() === 'faculty' || otherUserRole() === 'admin') {
+              <span class="role-badge" [class.faculty]="otherUserRole() === 'faculty'" [class.admin]="otherUserRole() === 'admin'">{{ otherUserRole() }}</span>
+            }
+            @if (otherUserIsBanned()) {
+              <span class="banned-tag">Banned</span>
             }
           </a>
         } @else {
@@ -26,8 +29,11 @@
               <ng-icon name="lucideCircleUserRound"></ng-icon>
             </span>
             <h1>{{ otherUserName() || 'Conversation' }}</h1>
-            @if (otherUserRole() === 'faculty') {
-              <span class="role-badge faculty">{{ otherUserRole() }}</span>
+            @if (otherUserRole() === 'faculty' || otherUserRole() === 'admin') {
+              <span class="role-badge" [class.faculty]="otherUserRole() === 'faculty'" [class.admin]="otherUserRole() === 'admin'">{{ otherUserRole() }}</span>
+            }
+            @if (otherUserIsBanned()) {
+              <span class="banned-tag">Banned</span>
             }
           </span>
         }
@@ -60,24 +66,30 @@
       }
     </ul>
 
-    <form class="compose-form" (ngSubmit)="sendMessage()">
-      <textarea
-        #composeTextarea
-        [(ngModel)]="newMessage"
-        name="newMessage"
-        placeholder="Type your message..."
-        rows="1"
-        [disabled]="sending()"
-        (keydown)="onTextareaKeydown($event)"
-        (input)="resizeTextarea()"
-      ></textarea>
-      <button type="submit" class="send-btn" [disabled]="!newMessage.trim() || sending()" aria-label="Send message">
-        @if (sending()) {
-          <app-spinner size="1.125rem" label="Sending" />
-        } @else {
-          <ng-icon name="lucideSendHorizontal" size="20"></ng-icon>
-        }
-      </button>
-    </form>
+    @if (otherUserIsBanned()) {
+      <p class="compose-disabled">This user is banned. You can no longer message them.</p>
+    } @else if (authService.isBanned()) {
+      <p class="compose-disabled">You are banned and cannot send messages.</p>
+    } @else {
+      <form class="compose-form" (ngSubmit)="sendMessage()">
+        <textarea
+          #composeTextarea
+          [(ngModel)]="newMessage"
+          name="newMessage"
+          placeholder="Type your message..."
+          rows="1"
+          [disabled]="sending()"
+          (keydown)="onTextareaKeydown($event)"
+          (input)="resizeTextarea()"
+        ></textarea>
+        <button type="submit" class="send-btn" [disabled]="!newMessage.trim() || sending()" aria-label="Send message">
+          @if (sending()) {
+            <app-spinner size="1.125rem" label="Sending" />
+          } @else {
+            <ng-icon name="lucideSendHorizontal" size="20"></ng-icon>
+          }
+        </button>
+      </form>
+    }
   }
 </section>

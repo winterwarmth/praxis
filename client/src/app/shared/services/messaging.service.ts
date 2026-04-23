@@ -9,6 +9,7 @@ export interface MessageThread {
   otherUserName: string;
   otherUserAvatarUrl: string | null;
   otherUserRole: string;
+  otherUserIsBanned: boolean;
   itemTitle: string;
   lastMessage: string;
   isUnread: boolean;
@@ -32,6 +33,7 @@ export interface ThreadResponse {
   otherUserHandle: string | null;
   otherUserAvatarUrl: string | null;
   otherUserRole: string;
+  otherUserIsBanned: boolean;
   listingTitle: string;
 }
 

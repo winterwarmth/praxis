@@ -16,7 +16,11 @@
     }
   </header>
 
-  @if (items().length === 0) {
+  @if (loading() && items().length > 0) {
+    <div class="loading">
+      <app-spinner label="Loading saved listings" />
+    </div>
+  } @else if (items().length === 0) {
     <p class="empty-state">
       You haven't saved any listings yet. Tap the Save button on a listing to keep it here for later.
     </p>
@@ -31,6 +35,7 @@
             [category]="''"
             [imageUrl]="item.imageUrl ?? null"
             [condition]="item.condition ?? null"
+            [sellerIsBanned]="isBannedSeller(item.id)"
           />
           @if (isSold(item.id)) {
             <span class="sold-label">Sold</span>

@@ -13,6 +13,12 @@
         }
       </a>
 
+      @if (authService.isAdmin()) {
+        <a routerLink="/admin" class="icon-btn" draggable="false" aria-label="Admin dashboard" title="Admin">
+          <ng-icon name="lucideShield"></ng-icon>
+        </a>
+      }
+
       <a [routerLink]="['/u', authService.user()?.user_metadata?.['username'] || 'me']" class="profile-link" draggable="false" aria-label="Profile">
         @if (profileImageUrl()) {
           <img class="header-avatar" [src]="profileImageUrl()" alt="Profile" />

@@ -26,8 +26,11 @@
           @if (getThreadRoute(thread); as route) {
             <a [routerLink]="route" class="message-link">
               <div class="thread-title">
-                @if (thread.otherUserRole === 'faculty') {
-                  <span class="role-badge faculty">{{ thread.otherUserRole }}</span>
+                @if (thread.otherUserRole === 'faculty' || thread.otherUserRole === 'admin') {
+                  <span class="role-badge" [class.faculty]="thread.otherUserRole === 'faculty'" [class.admin]="thread.otherUserRole === 'admin'">{{ thread.otherUserRole }}</span>
+                }
+                @if (thread.otherUserIsBanned) {
+                  <span class="banned-tag">Banned</span>
                 }
                 <span class="other-user">{{ thread.otherUserName }}</span>
                 <span class="separator">·</span>
@@ -38,8 +41,11 @@
           } @else {
             <div class="message-link">
               <div class="thread-title">
-                @if (thread.otherUserRole === 'faculty') {
-                  <span class="role-badge faculty">{{ thread.otherUserRole }}</span>
+                @if (thread.otherUserRole === 'faculty' || thread.otherUserRole === 'admin') {
+                  <span class="role-badge" [class.faculty]="thread.otherUserRole === 'faculty'" [class.admin]="thread.otherUserRole === 'admin'">{{ thread.otherUserRole }}</span>
+                }
+                @if (thread.otherUserIsBanned) {
+                  <span class="banned-tag">Banned</span>
                 }
                 <span class="other-user">{{ thread.otherUserName }}</span>
                 <span class="separator">·</span>

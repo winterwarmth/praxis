@@ -17,6 +17,7 @@ export class ListingCard {
   readonly imageUrl = input<string | null>(null);
   readonly condition = input<string | null>(null);
   readonly sellerName = input<string | null>(null);
+  readonly sellerIsBanned = input<boolean>(false);
 
   readonly conditionLabel = computed(() => formatCondition(this.condition()));
 }

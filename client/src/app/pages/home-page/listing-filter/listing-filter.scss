@@ -22,6 +22,10 @@
   font-size: 0.875rem;
   color: var(--text-color);
   cursor: pointer;
+
+  input[type="checkbox"] {
+    accent-color: #86efac;
+  }
 }
 
 .price-range {

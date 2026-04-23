@@ -1,1 +1,89 @@
-<p>admin-dashboard-page works!</p>
+<section class="admin-page">
+  <header class="admin-header">
+    <h1>Admin Dashboard</h1>
+    <p class="subtitle">Manage banned users and moderation</p>
+  </header>
+
+  <section class="admin-section">
+    <h2>Banned Users</h2>
+
+    @if (loading()) {
+      <div class="loading"><app-spinner label="Loading banned users" /></div>
+    } @else if (bannedUsers().length === 0) {
+      <p class="empty-text">No banned users</p>
+    } @else {
+      <ul class="banned-list">
+        @for (u of bannedUsers(); track u.id) {
+          <li class="banned-item">
+            <div class="banned-header">
+              <div class="banned-identity">
+                <a class="banned-username" [routerLink]="['/u', u.username]">@{{ u.username }}</a>
+                <span class="banned-name">{{ u.firstName }} {{ u.lastName }}</span>
+                <span class="banned-email">{{ u.email }}</span>
+              </div>
+              <button
+                type="button"
+                class="unban-btn"
+                [class.confirming]="confirmingUnbanId() === u.id"
+                [disabled]="unbanningId() === u.id"
+                (click)="onUnbanClick(u.id)"
+              >
+                @if (unbanningId() === u.id) {
+                  Unbanning...
+                } @else if (confirmingUnbanId() === u.id) {
+                  Confirm?
+                } @else {
+                  Unban
+                }
+              </button>
+            </div>
+
+            @if (u.banReason) {
+              <p class="ban-reason">
+                <span class="label">Reason:</span>
+                <span>{{ u.banReason }}</span>
+              </p>
+            }
+
+            <dl class="banned-meta">
+              @if (u.bannedAt) {
+                <div class="meta-item">
+                  <dt>Banned</dt>
+                  <dd>{{ u.bannedAt | date:'MMM d, y, h:mm a' }}</dd>
+                </div>
+              }
+              <div class="meta-item">
+                <dt>Joined</dt>
+                <dd>{{ u.joinDate | date:'MMM d, y' }}</dd>
+              </div>
+              <div class="meta-item">
+                <dt>Rating received</dt>
+                <dd>
+                  @if (u.totalReviewsReceived > 0) {
+                    {{ u.avgRatingReceived | number:'1.1-1' }} ★ ({{ u.totalReviewsReceived }})
+                  } @else {
+                    none
+                  }
+                </dd>
+              </div>
+              <div class="meta-item">
+                <dt>Listings</dt>
+                <dd>{{ u.activeListings }} active · {{ u.soldListings }} sold</dd>
+              </div>
+              <div class="meta-item">
+                <dt>Reviews authored</dt>
+                <dd>
+                  @if (u.reviewsAuthored > 0) {
+                    {{ u.reviewsAuthored }} ({{ u.avgRatingGiven | number:'1.1-1' }} ★ avg)
+                  } @else {
+                    0
+                  }
+                </dd>
+              </div>
+            </dl>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</section>

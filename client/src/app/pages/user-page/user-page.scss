@@ -68,9 +68,26 @@
   flex: 1;
 }
 
+.profile-actions-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .edit-btn {
   flex-shrink: 0;
   margin-top: 0.25rem;
+}
+
+.btn-preview {
+  background-color: rgba(251, 146, 60, 0.15);
+  color: #fdba74;
+  border: 1px solid rgba(251, 146, 60, 0.4);
+
+  &:hover:not(:disabled) {
+    background-color: rgba(251, 146, 60, 0.25);
+  }
 }
 
 .profile-info {
@@ -102,6 +119,10 @@
 
   &.faculty {
     background-color: #2f9e44;
+  }
+
+  &.admin {
+    background-color: #db2777;
   }
 }
 
@@ -277,6 +298,12 @@
   overflow-y: auto;
 }
 
+.privacy-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .checkbox-label {
   display: flex;
   align-items: center;
@@ -316,6 +343,21 @@
 .stars {
   color: #FECC02;
   letter-spacing: 1px;
+}
+
+.btn-admin-ban {
+  background-color: transparent;
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.5);
+
+  &:hover:not(:disabled) {
+    background-color: rgba(255, 107, 107, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
 .reviews-header {

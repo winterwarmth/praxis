@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { SearchBar } from '../../shared/ui/search-bar/search-bar';
 import { ListingCard } from '../../shared/ui/listing-card/listing-card';
 import { ListingFilter } from './listing-filter/listing-filter';
@@ -13,8 +14,10 @@ import { Listing, ListingService } from '../../shared/services/listing.service';
 })
 export class HomePage implements OnInit {
   private listingService = inject(ListingService);
+  private http = inject(HttpClient);
   readonly listings = signal<Listing[]>([]);
   readonly loading = signal(true);
+  readonly initialPayments = signal<string[]>([]);
 
   private search = signal('');
   private sort = signal('price-low');
@@ -22,9 +25,24 @@ export class HomePage implements OnInit {
   private priceMin = signal<number | null>(null);
   private priceMax = signal<number | null>(null);
   private courseId = signal<string | null>(null);
+  private minCondition = signal<string>('');
+  private freeOnly = signal(false);
+  private payments = signal<string[]>([]);
 
   ngOnInit(): void {
-    this.fetchListings();
+    this.http.get<{ autoPaymentFilter: boolean; preferredPaymentMethods: string }>('/api/auth/me').subscribe({
+      next: (me) => {
+        if (me.autoPaymentFilter && me.preferredPaymentMethods) {
+          const methods = me.preferredPaymentMethods.split(',').map(m => m.trim()).filter(Boolean);
+          if (methods.length > 0) {
+            this.payments.set(methods);
+            this.initialPayments.set(methods);
+          }
+        }
+        this.fetchListings();
+      },
+      error: () => this.fetchListings(),
+    });
   }
 
   onSearch(query: string): void {
@@ -49,7 +67,8 @@ export class HomePage implements OnInit {
   }
 
   onPaymentFilter(methods: string[]): void {
-    // Not implemented yet — no backend field
+    this.payments.set(methods);
+    this.fetchListings();
   }
 
   onCourseFilter(courseId: string): void {
@@ -57,16 +76,29 @@ export class HomePage implements OnInit {
     this.fetchListings();
   }
 
+  onConditionFilter(minCondition: string): void {
+    this.minCondition.set(minCondition);
+    this.fetchListings();
+  }
+
+  onFreeOnlyFilter(freeOnly: boolean): void {
+    this.freeOnly.set(freeOnly);
+    this.fetchListings();
+  }
+
   private fetchListings(): void {
     this.loading.set(true);
+    const free = this.freeOnly();
     this.listingService
       .getListings({
         search: this.search(),
         category: this.category(),
         sort: this.sort(),
-        minPrice: this.priceMin(),
-        maxPrice: this.priceMax(),
+        minPrice: free ? 0 : this.priceMin(),
+        maxPrice: free ? 0 : this.priceMax(),
         courseId: this.courseId() || undefined,
+        minCondition: this.minCondition() || undefined,
+        payments: this.payments(),
       })
       .subscribe({
         next: (data) => {

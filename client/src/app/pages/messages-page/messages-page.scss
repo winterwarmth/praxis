@@ -140,6 +140,12 @@
         color: #7dd992;
         border-color: rgba(47, 158, 68, 0.4);
       }
+
+      &.admin {
+        background-color: rgba(236, 72, 153, 0.15);
+        color: #f472b6;
+        border-color: rgba(236, 72, 153, 0.4);
+      }
     }
 
     .other-user {

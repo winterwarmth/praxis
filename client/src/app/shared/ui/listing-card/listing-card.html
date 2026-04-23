@@ -1,14 +1,23 @@
-<a class="listing-card" [routerLink]="['/listing', id()]" draggable="false">
+<a class="listing-card" [class.banned-border]="sellerIsBanned()" [routerLink]="['/listing', id()]" draggable="false">
   <div class="card-image">
     @if (imageUrl()) {
       <img [src]="imageUrl()" [alt]="title()" />
     } @else {
       <div class="placeholder"></div>
     }
+    @if (sellerIsBanned()) {
+      <span class="banned-watermark">Banned</span>
+    }
   </div>
   <div class="card-body">
     <h3 class="card-title">{{ title() }}</h3>
-    <span class="card-price">{{ price() | currency }}</span>
+    <span class="card-price" [class.free]="price() === 0">
+      @if (price() === 0) {
+        Free
+      } @else {
+        {{ price() | currency }}
+      }
+    </span>
     @if (condition()) {
       <span class="card-condition">{{ conditionLabel() }}</span>
     }
